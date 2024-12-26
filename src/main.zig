@@ -8,10 +8,11 @@ const rl = @cImport({
 const screen_width = 1440;
 const screen_height = 900;
 const SIDE = 40;
+const SPEED = 0.03;
 
 const Player = struct {
-	x: u32,
-	y: u32,
+	x: f32,
+	y: f32,
 	box: rl.Rectangle,
 };
 
@@ -23,7 +24,7 @@ pub fn main() void {
 
 	// player
 	// world space coords
-	const player: Player = Player{
+	var player: Player = Player{
 		.x = 0,
 		.y = 0,
 		.box = rl.Rectangle{
@@ -46,6 +47,20 @@ pub fn main() void {
 
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
+		// movement
+		if (rl.IsKeyDown(rl.KEY_W))
+			player.y -= SPEED
+		else if (rl.IsKeyDown(rl.KEY_A))
+			player.x -= SPEED
+		else if (rl.IsKeyDown(rl.KEY_S))
+			player.y += SPEED
+		else if (rl.IsKeyDown(rl.KEY_D))
+			player.x += SPEED;
+
+		// update player bounding box
+		player.box.x = player.x;
+		player.box.y = player.y;
+
 		rl.BeginDrawing();
 		defer rl.EndDrawing();
 
