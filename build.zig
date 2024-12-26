@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 	// statically link raylib
-	exe.addIncludePath(b.path(".")); // Will this work ?
+	exe.addIncludePath(b.path("."));
 	exe.addObjectFile(b.path("raylib/lib/libraylib.a"));
 	exe.linkLibC();
     b.installArtifact(exe);

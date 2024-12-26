@@ -9,6 +9,12 @@ const screen_width = 1440;
 const screen_height = 900;
 const SIDE = 40;
 
+const Player = struct {
+	x: u32,
+	y: u32,
+	box: rl.Rectangle,
+};
+
 pub fn main() void {
 
 	// Init window
@@ -17,11 +23,15 @@ pub fn main() void {
 
 	// player
 	// world space coords
-	const player: rl.Rectangle = rl.Rectangle{
-		.x = 0 - SIDE / 2,
-		.y = 0 - SIDE / 2,
-		.width = SIDE,
-		.height = SIDE,
+	const player: Player = Player{
+		.x = 0,
+		.y = 0,
+		.box = rl.Rectangle{
+			.x = 0 - SIDE / 2,
+			.y = 0 - SIDE / 2,
+			.width = SIDE,
+			.height = SIDE,
+		}
 	};
 
 	// camera
@@ -44,7 +54,7 @@ pub fn main() void {
 		// camera
 		rl.BeginMode2D(camera);
 		defer rl.EndMode2D();
-		rl.DrawRectangleRec(player, rl.RED);
+		rl.DrawRectangleRec(player.box, rl.RED);
 
 		// context
 		const context: [2]rl.Rectangle = [_]rl.Rectangle{
