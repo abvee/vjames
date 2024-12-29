@@ -18,7 +18,7 @@ const Player = struct {
 };
 
 pub fn main() !void {
-	// Allocator
+	// Allocator // TODO: replace with GPA
 	var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
 	defer arena.deinit();
 	const allocator = arena.allocator();
@@ -30,10 +30,10 @@ pub fn main() !void {
 	// player
 	// world space coords
 	var player: Player = Player{
-		.x = 0,
+		.x = SIDE + SIDE / 2,
 		.y = 0,
 		.box = rl.Rectangle{
-			.x = 0 - SIDE / 2,
+			.x = (SIDE + SIDE / 2) - SIDE / 2,
 			.y = 0 - SIDE / 2,
 			.width = SIDE,
 			.height = SIDE,
@@ -41,7 +41,7 @@ pub fn main() !void {
 	};
 
 	// camera
-	const camera: rl.Camera2D = rl.Camera2D{
+	var camera: rl.Camera2D = rl.Camera2D{
 		.target = rl.Vector2{.x = player.x, .y = player.y},
 		.offset = rl.Vector2{
 			.x = screen_width / 2, .y = screen_height / 2,
@@ -66,8 +66,11 @@ pub fn main() !void {
 			player.x += SPEED;
 
 		// update player bounding box
-		player.box.x = player.x;
-		player.box.y = player.y;
+		player.box.x = player.x - player.box.width / 2;
+		player.box.y = player.y - player.box.height / 2;
+
+		// update camera
+		camera.target = rl.Vector2{.x = player.x, .y = player.y};
 
 		rl.BeginDrawing();
 		defer rl.EndDrawing();
