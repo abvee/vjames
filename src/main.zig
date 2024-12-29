@@ -9,7 +9,7 @@ const level = @import("level.zig");
 const screen_width = 1440;
 const screen_height = 900;
 const SIDE = 40;
-const SPEED = 0.03;
+const SPEED = 0.1;
 
 const Player = struct {
 	x: f32,
@@ -55,19 +55,31 @@ pub fn main() !void {
 
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
-		// movement
-		if (rl.IsKeyDown(rl.KEY_W))
-			player.y -= SPEED
-		else if (rl.IsKeyDown(rl.KEY_A))
-			player.x -= SPEED
-		else if (rl.IsKeyDown(rl.KEY_S))
-			player.y += SPEED
-		else if (rl.IsKeyDown(rl.KEY_D))
-			player.x += SPEED;
+		var collision: rl.Rectangle = player.box;
 
-		// update player bounding box
-		player.box.x = player.x - player.box.width / 2;
-		player.box.y = player.y - player.box.height / 2;
+		// player movement
+		if (rl.IsKeyDown(rl.KEY_W))
+			collision.y -= SPEED
+		else if (rl.IsKeyDown(rl.KEY_A))
+			collision.x -= SPEED
+		else if (rl.IsKeyDown(rl.KEY_S))
+			collision.y += SPEED
+		else if (rl.IsKeyDown(rl.KEY_D))
+			collision.x += SPEED;
+
+		// update player bounding box only if collisions haven't occured
+		if (
+			// for expression checks if collisions have occured
+			for (lvl) |l| {
+				if (rl.CheckCollisionRecs(l, collision))
+					break false;
+			}
+			else true
+		) {
+			player.box = collision;
+			player.x = player.box.x + player.box.width / 2;
+			player.y = player.box.y + player.box.height / 2;
+		}
 
 		// update camera
 		camera.target = rl.Vector2{.x = player.x, .y = player.y};
