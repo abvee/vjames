@@ -30,11 +30,11 @@ pub fn main() !void {
 	// player
 	// world space coords
 	var player: Player = Player{
-		.x = SIDE + SIDE / 2,
-		.y = 0,
+		.x = 60,
+		.y = 20,
 		.box = rl.Rectangle{
-			.x = (SIDE + SIDE / 2) - SIDE / 2,
-			.y = 0 - SIDE / 2,
+			.x = 60 - SIDE / 2,
+			.y = 20 - SIDE / 2,
 			.width = SIDE,
 			.height = SIDE,
 		}
@@ -93,6 +93,8 @@ pub fn main() !void {
 		rl.BeginMode2D(camera);
 		defer rl.EndMode2D();
 		rl.DrawRectangleRec(player.box, rl.RED);
+		rl.DrawCircleLinesV(camera.target, 1.41 * 20, rl.SKYBLUE);
+		rl.DrawCircleLinesV(camera.target, 1.41 * 20 + 10, rl.PURPLE);
 
 		// draw level
 		for (lvl) |l| {
