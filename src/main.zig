@@ -4,6 +4,7 @@ const rl = @cImport({
 	@cInclude("raylib/include/raymath.h");
 	@cInclude("raylib/include/rlgl.h");
 });
+const level = @import("level.zig");
 
 const screen_width = 1440;
 const screen_height = 900;
@@ -16,7 +17,11 @@ const Player = struct {
 	box: rl.Rectangle,
 };
 
-pub fn main() void {
+pub fn main() !void {
+	// Allocator
+	var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+	defer arena.deinit();
+	const allocator = arena.allocator();
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");
@@ -45,6 +50,9 @@ pub fn main() void {
 		.zoom = 1,
 	};
 
+	// level
+	const lvl = try level.load(allocator, "lvls/lvl1");
+
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
 		// movement
@@ -71,12 +79,9 @@ pub fn main() void {
 		defer rl.EndMode2D();
 		rl.DrawRectangleRec(player.box, rl.RED);
 
-		// context
-		const context: [2]rl.Rectangle = [_]rl.Rectangle{
-			rl.Rectangle{.x = SIDE, .y = SIDE, .width = SIDE, .height = SIDE},
-			rl.Rectangle{.x = 2 * SIDE, .y = 2 * SIDE, .width = SIDE, .height = SIDE},
-		};
-		rl.DrawRectangleRec(context[0], rl.RAYWHITE);
-		rl.DrawRectangleRec(context[1], rl.RAYWHITE);
+		// draw level
+		for (lvl) |l| {
+			rl.DrawRectangleRec(l, rl.RAYWHITE);
+		}
 	}
 }
