@@ -101,19 +101,35 @@ pub fn main() !void {
 				rl.DrawRectangleRec(l, rl.RAYWHITE);
 			}
 		}
-		draw_references();
+		try draw_references();
 
 	}
 }
 
 // draw all references in screen space
-inline fn draw_references() void {
+inline fn draw_references() !void {
 	const center = rl.Vector2{.x = screen_width / 2, .y = screen_height / 2};
 
 	// gun circles
 	rl.DrawCircleLinesV(center, 1.41 * 20, rl.SKYBLUE);
 	rl.DrawCircleLinesV(center, 1.41 * 20 + 10, rl.PURPLE);
 
+	const mouse_pos = rl.GetMousePosition();
+
 	// center to mouse position
-	rl.DrawLineV(center, rl.GetMousePosition(), rl.GREEN);
+	rl.DrawLineV(center, mouse_pos, rl.GREEN);
+
+	// debug angle
+	const angle = std.math.atan2((mouse_pos.x - center.x) , (mouse_pos.y - center.y));
+	var s: [100]u8 = [_]u8{0} ** 100;
+	const t: []u8 = try std.fmt.bufPrint(s[0..], "{d}", .{angle * 180 / rl.PI});
+
+	// NOTE: The coordinate system is flipped on it's head. The first quadrant
+	// is on the bottom right, the second on the bottom left, the third on the
+	// top left and fourth on the top right
+
+	// This is because raylib considers (0,0) to be the top left, and we shift origin to the center.
+	// X directions are the same on paper, but Y increases as we go down
+
+	rl.DrawText(@ptrCast(t), screen_width / 2, screen_height - 50, 20, rl.GREEN);
 }
