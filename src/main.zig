@@ -89,17 +89,25 @@ pub fn main() !void {
 		defer rl.EndDrawing();
 
 		rl.ClearBackground(rl.BLACK);
+		draw_references();
 
 		// camera
 		rl.BeginMode2D(camera);
 		defer rl.EndMode2D();
 		rl.DrawRectangleRec(player.box, rl.RED);
-		rl.DrawCircleLinesV(camera.target, 1.41 * 20, rl.SKYBLUE);
-		rl.DrawCircleLinesV(camera.target, 1.41 * 20 + 10, rl.PURPLE);
 
 		// draw level
 		for (lvl) |l| {
 			rl.DrawRectangleRec(l, rl.RAYWHITE);
 		}
 	}
+}
+
+// draw all references in screen space
+inline fn draw_references() void {
+		const center = rl.Vector2{.x = screen_width / 2, .y = screen_height / 2};
+
+		// gun circles
+		rl.DrawCircleLinesV(center, 1.41 * 20, rl.SKYBLUE);
+		rl.DrawCircleLinesV(center, 1.41 * 20 + 10, rl.PURPLE);
 }
