@@ -15,6 +15,7 @@ const Player = struct {
 	x: f32,
 	y: f32,
 	box: rl.Rectangle,
+	gun: struct{center: rl.Vector2, radius: f32 = 10.0},
 };
 
 pub fn main() !void {
@@ -33,12 +34,19 @@ pub fn main() !void {
 		.x = 0,
 		.y = 0,
 		.box = undefined,
+		.gun = undefined,
 	};
 	player.box = rl.Rectangle{
 		.x = player.x - SIDE / 2,
 		.y = player.y - SIDE / 2,
 		.width = SIDE,
 		.height = SIDE,
+	};
+	player.gun = .{
+		.center = rl.Vector2{
+			.x = 1.41 * SIDE / 2.0 + 5, .y = 0,
+		},
+		.radius = 5,
 	};
 
 	// camera
@@ -81,6 +89,10 @@ pub fn main() !void {
 			player.x = player.box.x + SIDE / 2;
 			player.y = player.box.y + SIDE / 2;
 		}
+		player.gun.center = rl.Vector2{
+			.x = player.x + 1.41 * SIDE / 2.0 + player.gun.radius,
+			.y = player.y,
+		};
 
 		// update camera
 		camera.target = rl.Vector2{.x = player.x, .y = player.y};
@@ -94,7 +106,10 @@ pub fn main() !void {
 		{
 			rl.BeginMode2D(camera);
 			defer rl.EndMode2D();
+
+			// draw player
 			rl.DrawRectangleRec(player.box, rl.RED);
+			rl.DrawCircleV(player.gun.center, player.gun.radius, rl.BLUE);
 
 			// draw level
 			for (lvl) |l| {
@@ -111,8 +126,8 @@ inline fn draw_references() !void {
 	const center = rl.Vector2{.x = screen_width / 2, .y = screen_height / 2};
 
 	// gun circles
-	rl.DrawCircleLinesV(center, 1.41 * 20, rl.SKYBLUE);
-	rl.DrawCircleLinesV(center, 1.41 * 20 + 10, rl.PURPLE);
+	rl.DrawCircleLinesV(center, 1.41 * SIDE / 2.0, rl.SKYBLUE);
+	rl.DrawCircleLinesV(center, 1.41 * SIDE / 2.0 + 20, rl.PURPLE);
 
 	const mouse_pos = rl.GetMousePosition();
 
