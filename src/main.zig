@@ -4,6 +4,7 @@ const rl = @cImport({
 	@cInclude("raylib/include/raymath.h");
 	@cInclude("raylib/include/rlgl.h");
 });
+const RT2 = std.math.sqrt2;
 const level = @import("level.zig");
 
 const screen_width = 1440;
@@ -44,9 +45,10 @@ pub fn main() !void {
 	};
 	player.gun = .{
 		.center = rl.Vector2{
-			.x = 1.41 * SIDE / 2.0 + 5, .y = 0,
-		},
-		.radius = 5,
+			.x = player.x,
+			.y = player.y,
+		}, // TODO: make correct equation for this
+		.radius = SIDE / 4,
 	};
 
 	// camera
@@ -90,7 +92,7 @@ pub fn main() !void {
 			player.y = player.box.y + SIDE / 2;
 		}
 		player.gun.center = rl.Vector2{
-			.x = player.x + 1.41 * SIDE / 2.0 + player.gun.radius,
+			.x = player.x + RT2 * SIDE / 2.0 + player.gun.radius,
 			.y = player.y,
 		};
 
@@ -125,9 +127,11 @@ pub fn main() !void {
 inline fn draw_references() !void {
 	const center = rl.Vector2{.x = screen_width / 2, .y = screen_height / 2};
 
-	// gun circles
-	rl.DrawCircleLinesV(center, 1.41 * SIDE / 2.0, rl.SKYBLUE);
-	rl.DrawCircleLinesV(center, 1.41 * SIDE / 2.0 + 20, rl.PURPLE);
+	// hit box circumcircle
+	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0, rl.SKYBLUE);
+
+	// gun circle
+	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 4), rl.PURPLE);
 
 	const mouse_pos = rl.GetMousePosition();
 
