@@ -43,11 +43,11 @@ pub fn main() !void {
 		.width = SIDE,
 		.height = SIDE,
 	};
+
+	// gun
+	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
 	player.gun = .{
-		.center = rl.Vector2{
-			.x = player.x,
-			.y = player.y,
-		}, // TODO: make correct equation for this
+		.center = undefined, // will be defined later
 		.radius = SIDE / 4,
 	};
 
@@ -91,9 +91,13 @@ pub fn main() !void {
 			player.x = player.box.x + SIDE / 2;
 			player.y = player.box.y + SIDE / 2;
 		}
+
+		// update gun
+		const mouse_pos = rl.GetMousePosition();
+		const angle = std.math.atan2((mouse_pos.x - screen_width / 2) , (mouse_pos.y - screen_height / 2));
 		player.gun.center = rl.Vector2{
-			.x = player.x + RT2 * SIDE / 2.0 + player.gun.radius,
-			.y = player.y,
+			.x = gun_circle_radius * std.math.sin(angle) + player.x,
+			.y = gun_circle_radius * std.math.cos(angle) + player.y,
 		};
 
 		// update camera
@@ -132,6 +136,9 @@ inline fn draw_references() !void {
 
 	// gun circle
 	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 4), rl.PURPLE);
+
+	// gun outer circle
+	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 2), rl.YELLOW);
 
 	const mouse_pos = rl.GetMousePosition();
 
