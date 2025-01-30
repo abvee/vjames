@@ -62,7 +62,7 @@ pub fn main() !void {
 	};
 
 	// level
-	const lvl = try level.load(allocator, "lvls/lvl1");
+	const lvl = try level.load(allocator, "lvls/lvl2");
 
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
