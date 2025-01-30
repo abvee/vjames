@@ -4,6 +4,7 @@ const rl = @cImport({
 	@cInclude("raylib/include/raymath.h");
 	@cInclude("raylib/include/rlgl.h");
 });
+const RT2 = std.math.sqrt2;
 const level = @import("level.zig");
 
 const screen_width = 1440;
@@ -15,6 +16,7 @@ const Player = struct {
 	x: f32,
 	y: f32,
 	box: rl.Rectangle,
+	gun: struct{center: rl.Vector2, radius: f32 = 10.0},
 };
 
 pub fn main() !void {
@@ -33,12 +35,20 @@ pub fn main() !void {
 		.x = 0,
 		.y = 0,
 		.box = undefined,
+		.gun = undefined,
 	};
 	player.box = rl.Rectangle{
 		.x = player.x - SIDE / 2,
 		.y = player.y - SIDE / 2,
 		.width = SIDE,
 		.height = SIDE,
+	};
+
+	// gun
+	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
+	player.gun = .{
+		.center = undefined, // will be defined later
+		.radius = SIDE / 4,
 	};
 
 	// camera
@@ -82,6 +92,14 @@ pub fn main() !void {
 			player.y = player.box.y + SIDE / 2;
 		}
 
+		// update gun
+		const mouse_pos = rl.GetMousePosition();
+		const angle = std.math.atan2((mouse_pos.x - screen_width / 2) , (mouse_pos.y - screen_height / 2));
+		player.gun.center = rl.Vector2{
+			.x = gun_circle_radius * std.math.sin(angle) + player.x,
+			.y = gun_circle_radius * std.math.cos(angle) + player.y,
+		};
+
 		// update camera
 		camera.target = rl.Vector2{.x = player.x, .y = player.y};
 
@@ -91,15 +109,53 @@ pub fn main() !void {
 		rl.ClearBackground(rl.BLACK);
 
 		// camera
-		rl.BeginMode2D(camera);
-		defer rl.EndMode2D();
-		rl.DrawRectangleRec(player.box, rl.RED);
-		rl.DrawCircleLinesV(camera.target, 1.41 * 20, rl.SKYBLUE);
-		rl.DrawCircleLinesV(camera.target, 1.41 * 20 + 10, rl.PURPLE);
+		{
+			rl.BeginMode2D(camera);
+			defer rl.EndMode2D();
 
-		// draw level
-		for (lvl) |l| {
-			rl.DrawRectangleRec(l, rl.RAYWHITE);
+			// draw player
+			rl.DrawRectangleRec(player.box, rl.RED);
+			rl.DrawCircleV(player.gun.center, player.gun.radius, rl.BLUE);
+
+			// draw level
+			for (lvl) |l| {
+				rl.DrawRectangleRec(l, rl.RAYWHITE);
+			}
 		}
+		try draw_references();
+
 	}
+}
+
+// draw all references in screen space
+inline fn draw_references() !void {
+	const center = rl.Vector2{.x = screen_width / 2, .y = screen_height / 2};
+
+	// hit box circumcircle
+	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0, rl.SKYBLUE);
+
+	// gun circle
+	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 4), rl.PURPLE);
+
+	// gun outer circle
+	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 2), rl.YELLOW);
+
+	const mouse_pos = rl.GetMousePosition();
+
+	// center to mouse position
+	rl.DrawLineV(center, mouse_pos, rl.GREEN);
+
+	// debug angle
+	const angle = std.math.atan2((mouse_pos.x - center.x) , (mouse_pos.y - center.y));
+	var s: [100]u8 = [_]u8{0} ** 100;
+	const t: []u8 = try std.fmt.bufPrint(s[0..], "{d}", .{angle * 180 / rl.PI});
+
+	// NOTE: The coordinate system is flipped on it's head. The first quadrant
+	// is on the bottom right, the second on the bottom left, the third on the
+	// top left and fourth on the top right
+
+	// This is because raylib considers (0,0) to be the top left, and we shift origin to the center.
+	// X directions are the same on paper, but Y increases as we go down
+
+	rl.DrawText(@ptrCast(t), screen_width / 2, screen_height - 50, 20, rl.GREEN);
 }
