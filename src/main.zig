@@ -135,7 +135,7 @@ inline fn draw_references() !void {
 	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0, rl.SKYBLUE);
 
 	// gun circle
-	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 4), rl.PURPLE);
+	// rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 4), rl.PURPLE);
 
 	// gun outer circle
 	rl.DrawCircleLinesV(center, RT2 * SIDE / 2.0 + (SIDE / 2), rl.YELLOW);
