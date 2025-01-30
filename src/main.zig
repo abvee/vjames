@@ -28,16 +28,17 @@ pub fn main() !void {
 	defer rl.CloseWindow();
 
 	// player
-	// world space coords
+	// note that all coords are world space coords, unless it's a reference.
 	var player: Player = Player{
-		.x = 60,
-		.y = 20,
-		.box = rl.Rectangle{
-			.x = 60 - SIDE / 2,
-			.y = 20 - SIDE / 2,
-			.width = SIDE,
-			.height = SIDE,
-		}
+		.x = 0,
+		.y = 0,
+		.box = undefined,
+	};
+	player.box = rl.Rectangle{
+		.x = player.x - SIDE / 2,
+		.y = player.y - SIDE / 2,
+		.width = SIDE,
+		.height = SIDE,
 	};
 
 	// camera
@@ -77,8 +78,8 @@ pub fn main() !void {
 			else true
 		) {
 			player.box = collision;
-			player.x = player.box.x + player.box.width / 2;
-			player.y = player.box.y + player.box.height / 2;
+			player.x = player.box.x + SIDE / 2;
+			player.y = player.box.y + SIDE / 2;
 		}
 
 		// update camera
