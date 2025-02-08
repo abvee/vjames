@@ -4,7 +4,7 @@ const posix = std.posix;
 const assert = std.debug.assert;
 
 const PORT = 12271; // default port
-var addr: net.Address = undefined;
+var addr: net.Address = undefined; // server's address
 
 const netArgsErrors = error {NoAddress, NoPort};
 fn init() !void {
@@ -12,13 +12,21 @@ fn init() !void {
 		return error.NoAddress;
 	}
 
+	// make struct sockaddr
 	const ip = get_ip(std.os.argv[1]);
 	addr = try net.Address.parseIp(
 		ip,
 		try get_port(std.os.argv[1] + ip.len), // you can do this in zig ??
 	);
+	std.debug.print("Connecting to {}:{}", .{ip, addr.getPort()});
 
-	std.debug.print("{any}\n", .{addr.in.port});
+	// socket and connect
+	const sock = try posix.socket(
+		posix.AF.INET,
+		posix.SOCK.DGRAM,
+		posix.IPPROTO.UDP,
+	);
+	try posix.connect(sock, &addr.any, @sizeOf(addr));
 }
 
 // parse command line arguments
