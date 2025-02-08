@@ -1,8 +1,8 @@
 const std = @import("std");
 const rl = @cImport({
-	@cInclude("raylib/include/raylib.h");
-	@cInclude("raylib/include/raymath.h");
-	@cInclude("raylib/include/rlgl.h");
+	@cInclude("raylib.h");
+	@cInclude("raymath.h");
+	@cInclude("rlgl.h");
 });
 const RT2 = std.math.sqrt2;
 const level = @import("level.zig");

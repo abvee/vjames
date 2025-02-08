@@ -1,9 +1,9 @@
 const std = @import("std");
 const fs = std.fs;
 const rl = @cImport({
-	@cInclude("raylib/include/raylib.h");
-	@cInclude("raylib/include/raymath.h");
-	@cInclude("raylib/include/rlgl.h");
+	@cInclude("raylib.h");
+	@cInclude("raymath.h");
+	@cInclude("rlgl.h");
 });
 
 const MAX = 1024; // temporary maximum variable
