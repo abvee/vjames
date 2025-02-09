@@ -11,7 +11,8 @@ var server: std.fs.File = undefined; // read and write to server's file.
 const netArgsErrors = error {NoAddress, NoPort};
 
 pub fn init() !void {
-	assert(sock == null);
+	assert(sock == null); // stops init() from being called twice
+
 	if (std.os.argv.len < 2) {
 		return error.NoAddress;
 	}
@@ -36,6 +37,12 @@ pub fn init() !void {
 	server = std.fs.File{
 		.handle = sock.?,
 	};
+}
+
+pub fn deinit() void {
+	assert(sock != null); // make sure deinit() is not called before init
+	server.close();
+	posix.close(sock.?);
 }
 
 // parse command line arguments
