@@ -4,10 +4,14 @@ const posix = std.posix;
 const assert = std.debug.assert;
 
 const PORT = 12271; // default port
+var sock: ?posix.socket_t  = null; // client socket
 var addr: net.Address = undefined; // server's address
+var server: std.fs.File = undefined; // read and write to server's file.
 
 const netArgsErrors = error {NoAddress, NoPort};
-fn init() !void {
+
+pub fn init() !void {
+	assert(sock == null);
 	if (std.os.argv.len < 2) {
 		return error.NoAddress;
 	}
@@ -21,12 +25,17 @@ fn init() !void {
 	std.debug.print("Connecting to {}:{}", .{ip, addr.getPort()});
 
 	// socket and connect
-	const sock = try posix.socket(
+	sock = try posix.socket(
 		posix.AF.INET,
 		posix.SOCK.DGRAM,
 		posix.IPPROTO.UDP,
 	);
-	try posix.connect(sock, &addr.any, @sizeOf(addr));
+	try posix.connect(sock.?, &addr.any, @sizeOf(addr));
+
+	// open the file
+	server = std.fs.File{
+		.handle = sock.?,
+	};
 }
 
 // parse command line arguments
@@ -57,3 +66,5 @@ test "get_port" {
 		.{try get_port(str + ip.len)}
 	);
 }
+
+// all public to interact with the server
