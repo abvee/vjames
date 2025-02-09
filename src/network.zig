@@ -7,6 +7,7 @@ const PORT = 12271; // default port
 var sock: ?posix.socket_t  = null; // client socket
 var addr: net.Address = undefined; // server's address
 var server: std.fs.File = undefined; // read and write to server's file.
+var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
 
 const netArgsErrors = error {NoAddress, NoPort};
 
@@ -37,13 +38,41 @@ pub fn init() !void {
 	server = std.fs.File{
 		.handle = sock.?,
 	};
+	server_writer = server.writer();
 }
 
 pub fn deinit() void {
 	assert(sock != null); // make sure deinit() is not called before init
-	server.close();
+	server.close(); // will this close the server writer ???
 	posix.close(sock.?);
 }
+
+// send player position
+pub fn send_pos(x: f32, y: 32) !void {
+	const pos: packed struct {
+		x: f32,
+		y: f32,
+	} = .{.x = x, .y = y};
+	try server_writer.writeStruct(pos);
+}
+
+// for now, singular get position, does not get the position of all the
+// players, just one
+pub fn get_pos() struct{x: f32, y: f32} {
+	var buf: [8]u8 = .{0} ** 8;
+	const n = server.read(buf[0..]);
+	assert(n == 8);
+
+	// What the hell is this
+	const x: f32 = @as(*f32, @alignCast(@ptrCast(&buf[0]))).*;
+	const y: f32 = @as(*f32, @alignCast(@ptrCast(&buf[4]))).*;
+	return .{.x = x, .y = y};
+}
+// Okay, I think I need to explain this ^
+// We read from the socket into the buffer of 8 bytes
+// then we cast the first 4 bytes and the last 4 bytes
+// I'm dereferencing the *f32 we get immediately in the hopes that all this
+// stuff stays in the registers so that alignment isn't broken.
 
 // parse command line arguments
 // They should be in this format:
