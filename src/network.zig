@@ -24,7 +24,7 @@ pub fn init() !void {
 		ip,
 		try get_port(std.os.argv[1] + ip.len), // you can do this in zig ??
 	);
-	std.debug.print("Connecting to {}:{}", .{ip, addr.getPort()});
+	std.debug.print("Connecting to {s}:{}\n", .{ip, addr.getPort()});
 
 	// socket and connect
 	sock = try posix.socket(
@@ -32,7 +32,7 @@ pub fn init() !void {
 		posix.SOCK.DGRAM,
 		posix.IPPROTO.UDP,
 	);
-	try posix.connect(sock.?, &addr.any, @sizeOf(addr));
+	try posix.connect(sock.?, &addr.any, @sizeOf(@TypeOf(addr)));
 
 	// open the file
 	server = std.fs.File{
@@ -43,12 +43,12 @@ pub fn init() !void {
 
 pub fn deinit() void {
 	assert(sock != null); // make sure deinit() is not called before init
+	// posix.close(sock.?);
 	server.close(); // will this close the server writer ???
-	posix.close(sock.?);
 }
 
 // send player position
-pub fn send_pos(x: f32, y: 32) !void {
+pub fn send_pos(x: f32, y: f32) !void {
 	const pos: packed struct {
 		x: f32,
 		y: f32,
@@ -58,7 +58,7 @@ pub fn send_pos(x: f32, y: 32) !void {
 
 // for now, singular get position, does not get the position of all the
 // players, just one
-pub fn get_pos() struct{x: f32, y: f32} {
+pub fn recv_pos() struct{x: f32, y: f32} {
 	var buf: [8]u8 = .{0} ** 8;
 	const n = server.read(buf[0..]);
 	assert(n == 8);
@@ -73,6 +73,11 @@ pub fn get_pos() struct{x: f32, y: f32} {
 // then we cast the first 4 bytes and the last 4 bytes
 // I'm dereferencing the *f32 we get immediately in the hopes that all this
 // stuff stays in the registers so that alignment isn't broken.
+var buffer: [1024]u8 = .{0} ** 1024;
+pub fn recv_test() ![]u8 {
+	const n = try server.read(buffer[0..]);
+	return buffer[0..n];
+}
 
 // parse command line arguments
 // They should be in this format:

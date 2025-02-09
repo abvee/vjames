@@ -21,6 +21,7 @@ pub fn main() !void {
 	}
 	try stdout.print("Using port: {}\n", .{addr.getPort()});
 
+	// socket
 	const sock = try posix.socket(
 		posix.AF.INET,
 		posix.SOCK.DGRAM,
@@ -31,27 +32,16 @@ pub fn main() !void {
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	// recvfrom single client
-	var buf: [1024]u8 = .{0} ** 1024;
+	// recvfrom
+	var buf: [8]u8 = .{0} ** 8;
 
     var client_len: posix.socklen_t = @sizeOf(net.Address);
-	var client_one: net.Address = undefined;
-	var client_two: net.Address = undefined;
-
-	// Hello packets - NOTE: we are assuming the packet gets through here
-	// Also it is blocking
-	_ = try posix.recvfrom(sock, buf[0..], 0, &client_one.any, &client_len);
-	_ = try posix.recvfrom(sock, buf[0..], 0, &client_two.any, &client_len);
+	var client: net.Address = undefined;
 
 	// send the locations to each other
-	while (true) {
-		_ = try posix.recvfrom(sock, buf[0..], 0, &client_one.any, &client_len);
-		_ = try posix.recvfrom(sock, buf[0..], 0, &client_two.any, &client_len);
-
-		_ = try posix.sendto(sock, "bye bye world", 0, &client_one.any, @sizeOf(net.Address));
-		_ = try posix.sendto(sock, "bye bye world", 0, &client_two.any, @sizeOf(net.Address));
-	}
-	std.debug.print("{s}\n", .{buf});
+	_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
+	std.debug.print("{any}\n", .{buf});
+	_ = try posix.sendto(sock, "bye bye world", 0, &client.any, @sizeOf(net.Address));
 }
 
 // get port from the command line and return it
