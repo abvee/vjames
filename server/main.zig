@@ -34,14 +34,24 @@ pub fn main() !void {
 	// recvfrom single client
 	var buf: [1024]u8 = .{0} ** 1024;
 
-	var client: net.Address = undefined;
     var client_len: posix.socklen_t = @sizeOf(net.Address);
+	var client_one: net.Address = undefined;
+	var client_two: net.Address = undefined;
 
-	_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
+	// Hello packets - NOTE: we are assuming the packet gets through here
+	// Also it is blocking
+	_ = try posix.recvfrom(sock, buf[0..], 0, &client_one.any, &client_len);
+	_ = try posix.recvfrom(sock, buf[0..], 0, &client_two.any, &client_len);
+
+	// send the locations to each other
+	while (true) {
+		_ = try posix.recvfrom(sock, buf[0..], 0, &client_one.any, &client_len);
+		_ = try posix.recvfrom(sock, buf[0..], 0, &client_two.any, &client_len);
+
+		_ = try posix.sendto(sock, "bye bye world", 0, &client_one.any, @sizeOf(net.Address));
+		_ = try posix.sendto(sock, "bye bye world", 0, &client_two.any, @sizeOf(net.Address));
+	}
 	std.debug.print("{s}\n", .{buf});
-
-	// sendto
-	_ = try posix.sendto(sock, "bye bye world", 0, &client.any, @sizeOf(net.Address));
 }
 
 // get port from the command line and return it
