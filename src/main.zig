@@ -6,6 +6,7 @@ const rl = @cImport({
 });
 const RT2 = std.math.sqrt2;
 const level = @import("level.zig");
+const network = @import("network.zig");
 
 const screen_width = 1440;
 const screen_height = 900;
@@ -24,6 +25,14 @@ pub fn main() !void {
 	var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
 	defer arena.deinit();
 	const allocator = arena.allocator();
+
+	// Initialise the network
+	try network.init();
+	defer network.deinit();
+
+	// test network
+	try network.send_pos(10.3, 0.3);
+	std.debug.print("{s}\n", .{try network.recv_test()});
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");
