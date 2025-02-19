@@ -1,14 +1,15 @@
 const std = @import("std");
 const net = std.net;
 const posix = std.posix;
-
-// stdout
 const stdout = std.io.getStdOut().writer();
 
 var addr = net.Address.initIp4(
 	[4]u8{0,0,0,0}, // accept connections from any address
 	12271, // default port
 );
+
+var conns: [8]std.Thread = [_]std.Thread{} ** 8;
+// max of 8 people. Should make this changeable ?
 
 const ParameterError = error {IncorrectArguments};
 pub fn main() !void {
@@ -28,20 +29,24 @@ pub fn main() !void {
 		posix.IPPROTO.UDP,
 	);
 	defer posix.close(sock);
+	@compileLog(@TypeOf(sock));
 
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	// recvfrom
+	// We start here
 	var buf: [8]u8 = .{0} ** 8;
 
-	var client: net.Address = undefined;
-    var client_len: posix.socklen_t = @sizeOf(net.Address);
+	// wait for hello packets forever
+	while (true) {
+		var client: net.Address = undefined;
+		var client_len: posix.socklen_t = @sizeOf(net.Address);
 
-	// send the locations to each other
-	_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
-	std.debug.print("{any}\n", .{buf});
-	_ = try posix.sendto(sock, "bye bye world", 0, &client.any, client.getOsSockLen());
+		// client hello packet
+		_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
+		// server hi packet
+		_ = try posix.sendto(sock, "hi", 0, &client.any, client.getOsSockLen());
+	}
 }
 
 // get port from the command line and return it
