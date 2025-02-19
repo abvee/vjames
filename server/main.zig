@@ -35,13 +35,13 @@ pub fn main() !void {
 	// recvfrom
 	var buf: [8]u8 = .{0} ** 8;
 
-    var client_len: posix.socklen_t = @sizeOf(net.Address);
 	var client: net.Address = undefined;
+    var client_len: posix.socklen_t = @sizeOf(net.Address);
 
 	// send the locations to each other
 	_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
 	std.debug.print("{any}\n", .{buf});
-	_ = try posix.sendto(sock, "bye bye world", 0, &client.any, @sizeOf(net.Address));
+	_ = try posix.sendto(sock, "bye bye world", 0, &client.any, client.getOsSockLen());
 }
 
 // get port from the command line and return it
