@@ -2,29 +2,36 @@ const std = @import("std");
 const net = std.net;
 const posix = std.posix;
 const assert = std.debug.assert;
+const stdout = std.io.getStdOut().writer();
 
 const PORT = 12271; // default port
 var sock: ?posix.socket_t  = null; // client socket
-var addr: net.Address = undefined; // server's address
+var addr: net.Address = net.Address.initIp4(
+	[4]u8{127,0,0,1},
+	PORT,
+); // default server's address
 var server: std.fs.File = undefined; // read and write to server's file.
 var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
-
-const netArgsErrors = error {NoAddress, NoPort};
 
 pub fn init() !void {
 	assert(sock == null); // stops init() from being called twice
 
-	if (std.os.argv.len < 2) {
-		return error.NoAddress;
+	// set cmdline sockaddr
+	if (std.os.argv.len < 2)
+		try stdout.print("No Address specified, using default\n", .{})
+	else {
+		const ip = get_ip(std.os.argv[1]);
+		addr = try net.Address.parseIp(
+			ip,
+			get_port(std.os.argv[1] + ip.len)
+				catch |err| switch (err) {
+					netArgsErrors.NoPort => PORT,
+					else => return err,
+				},
+		);
 	}
 
-	// make struct sockaddr
-	const ip = get_ip(std.os.argv[1]);
-	addr = try net.Address.parseIp(
-		ip,
-		try get_port(std.os.argv[1] + ip.len), // you can do this in zig ??
-	);
-	std.debug.print("Connecting to {s}:{}\n", .{ip, addr.getPort()});
+	std.debug.print("Connecting to {}\n", .{addr});
 
 	// socket and connect
 	sock = try posix.socket(
@@ -32,8 +39,12 @@ pub fn init() !void {
 		posix.SOCK.DGRAM,
 		posix.IPPROTO.UDP,
 	);
-	errdefer posix.close(sock);
-	try posix.connect(sock.?, &addr.any, @sizeOf(@TypeOf(addr)));
+	errdefer posix.close(sock.?);
+	try posix.connect(
+		sock.?,
+		&addr.any,
+		addr.getOsSockLen(),
+	);
 
 	// open the file
 	server = std.fs.File{
@@ -90,6 +101,8 @@ fn get_ip(s: [*:0]const u8) []const u8 {
 	return s[0..i];
 }
 
+const netArgsErrors = error{NoPort};
+
 // i is the index of the ':' in the ip
 inline fn get_port(s: [*:0]const u8) !u16 {
 	var i: u8 = 1;
@@ -108,5 +121,3 @@ test "get_port" {
 		.{try get_port(str + ip.len)}
 	);
 }
-
-// all public to interact with the server
