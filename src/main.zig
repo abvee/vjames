@@ -11,13 +11,17 @@ const network = @import("network.zig");
 const screen_width = 1440;
 const screen_height = 900;
 const SIDE = 40;
-const SPEED = 0.1;
+const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
 
 const Player = struct {
 	x: f32,
 	y: f32,
 	box: rl.Rectangle,
-	gun: struct{center: rl.Vector2, radius: f32 = 10.0},
+};
+
+const Gun = struct{
+	center: rl.Vector2,
+	radius: f32 = 10.0,
 };
 
 pub fn main() !void {
@@ -44,7 +48,6 @@ pub fn main() !void {
 		.x = 0,
 		.y = 0,
 		.box = undefined,
-		.gun = undefined,
 	};
 	player.box = rl.Rectangle{
 		.x = player.x - SIDE / 2,
@@ -54,11 +57,11 @@ pub fn main() !void {
 	};
 
 	// gun
-	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
-	player.gun = .{
+	var gun: Gun = Gun{
 		.center = undefined, // will be defined later
 		.radius = SIDE / 4,
 	};
+	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
 
 	// camera
 	var camera: rl.Camera2D = rl.Camera2D{
@@ -104,7 +107,7 @@ pub fn main() !void {
 		// update gun
 		const mouse_pos = rl.GetMousePosition();
 		const angle = std.math.atan2((mouse_pos.x - screen_width / 2) , (mouse_pos.y - screen_height / 2));
-		player.gun.center = rl.Vector2{
+		gun.center = rl.Vector2{
 			.x = gun_circle_radius * std.math.sin(angle) + player.x,
 			.y = gun_circle_radius * std.math.cos(angle) + player.y,
 		};
@@ -124,7 +127,7 @@ pub fn main() !void {
 
 			// draw player
 			rl.DrawRectangleRec(player.box, rl.RED);
-			rl.DrawCircleV(player.gun.center, player.gun.radius, rl.BLUE);
+			rl.DrawCircleV(gun.center, gun.radius, rl.BLUE);
 
 			// draw level
 			for (lvl) |l| {
