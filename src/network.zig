@@ -32,6 +32,7 @@ pub fn init() !void {
 		posix.SOCK.DGRAM,
 		posix.IPPROTO.UDP,
 	);
+	errdefer posix.close(sock);
 	try posix.connect(sock.?, &addr.any, @sizeOf(@TypeOf(addr)));
 
 	// open the file
