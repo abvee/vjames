@@ -36,7 +36,7 @@ pub fn main() !void {
 
 	// test network
 	try network.send_pos(10.3, 0.3);
-	std.debug.print("{s}\n", .{try network.recv_test()});
+	std.debug.print("{any}\n", .{try network.recv_test()});
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");

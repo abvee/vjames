@@ -51,7 +51,18 @@ pub fn init() !void {
 		.handle = sock.?,
 	};
 	server_writer = server.writer();
+
+	// send hello and wait for hi
+	// hello();
 }
+
+// generic packet
+const Packet = packed struct {
+	x: f32,
+	y: f32,
+};
+// generally used for position data, hence the .x and .y fields
+// The hello and hi packets are all filled with 1s
 
 pub fn deinit() void {
 	assert(sock != null); // make sure deinit() is not called before init
@@ -61,10 +72,7 @@ pub fn deinit() void {
 
 // send player position
 pub fn send_pos(x: f32, y: f32) !void {
-	const pos: packed struct {
-		x: f32,
-		y: f32,
-	} = .{.x = x, .y = y};
+	const pos: Packet = Packet{.x = x, .y = y};
 	try server_writer.writeStruct(pos);
 }
 
