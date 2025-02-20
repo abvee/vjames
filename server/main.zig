@@ -1,17 +1,20 @@
 const std = @import("std");
 const net = std.net;
 const posix = std.posix;
+const assert = std.debug.assert;
 const stdout = std.io.getStdOut().writer();
 
 var addr = net.Address.initIp4(
 	[4]u8{0,0,0,0}, // accept connections from any address
 	12271, // default port
 );
+const hi_packet = [_]u8{0xff} ** 8; // all 1s hi packet
 
-var conns: [8]std.Thread = [_]std.Thread{} ** 8;
-// max of 8 people. Should make this changeable ?
+var conns: [10]?net.Address = [_]net.Address{null} ** 10;
+// support a maximum of 10 connections
+var no_conns: u8 = 0; // current number of connections
 
-const ParameterError = error {IncorrectArguments};
+const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
 
 	// get port from cmdline
@@ -29,13 +32,13 @@ pub fn main() !void {
 		posix.IPPROTO.UDP,
 	);
 	defer posix.close(sock);
-	@compileLog(@TypeOf(sock));
 
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	// We start here
 	var buf: [8]u8 = .{0} ** 8;
+	// packet buffer
+	// refer to client networking for packet structure.
 
 	// wait for hello packets forever
 	while (true) {
@@ -44,8 +47,10 @@ pub fn main() !void {
 
 		// client hello packet
 		_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
+		// TODO: make sure that the same player is not connecting twice here
+
 		// server hi packet
-		_ = try posix.sendto(sock, "hi", 0, &client.any, client.getOsSockLen());
+		_ = try posix.sendto(sock, hi_packet[0..], 0, &client.any, client.getOsSockLen());
 	}
 }
 
