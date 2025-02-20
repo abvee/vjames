@@ -12,7 +12,7 @@ var addr = net.Address.initIp4(
 const MAX_PLAYERS = 10;
 
 // generic packet structure
-const packetData = [8]u8;
+const packetData = [12]u8;
 const packet = [1 + @sizeOf(packetData)]u8;
 // a packet is 1 byte for (id) and the rest of the packet
 
@@ -46,7 +46,7 @@ pub fn main() !void {
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	var buf: packet = .{0} ** 9;
+	var buf: packet = .{0} ** @sizeOf(packet);
 	// packet buffer
 	// refer to client networking for packet structure.
 
