@@ -8,11 +8,18 @@ var addr = net.Address.initIp4(
 	[4]u8{0,0,0,0}, // accept connections from any address
 	12271, // default port
 );
-const hi_packet = [_]u8{0xff} ** 8; // all 1s hi packet
 
-var conns: [10]?net.Address = [_]net.Address{null} ** 10;
+// generic packet structure
+const Packet = [9]u8;
+
+var conns: [10]?struct{
+	id: u8,
+	addr: net.Address
+} = .{null} ** 10;
 // support a maximum of 10 connections
 var no_conns: u8 = 0; // current number of connections
+
+var biggest_id: u8 = 0; // largest id till now
 
 const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
@@ -36,21 +43,67 @@ pub fn main() !void {
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	var buf: [8]u8 = .{0} ** 8;
+	var buf: Packet = .{0} ** 9;
 	// packet buffer
 	// refer to client networking for packet structure.
 
-	// wait for hello packets forever
+	// wait for packets
 	while (true) {
 		var client: net.Address = undefined;
 		var client_len: posix.socklen_t = @sizeOf(net.Address);
 
-		// client hello packet
 		_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
-		// TODO: make sure that the same player is not connecting twice here
 
-		// server hi packet
-		_ = try posix.sendto(sock, hi_packet[0..], 0, &client.any, client.getOsSockLen());
+		const id = buf[0]; // first byte of output is id
+		switch (id) {
+			0xff => {
+				const hi: Packet = .{new_id()} ++ .{0xff} ** 8;
+				posix.sendto(
+					sock,
+					hi[0..],
+					0,
+					&client.any,
+					client.getOsSockLen(),
+				);
+
+				// TODO: handle full server
+				add_conn(hi[0], client) catch {};
+			},
+			else => update_position()
+				catch |err| return err,
+		}
+	}
+}
+
+// TODO: Long lived server will need to keep track which ids have already been
+// taken.
+inline fn new_id() u8 {
+	biggest_id += 1;
+	return biggest_id;
+}
+
+inline fn update_position(id: u8, client: net.Address) !void {
+	_ = id;
+	_ = client;
+	return void;
+}
+
+const LobbyErrors = error{ServerFull};
+// Add to the conns array
+inline fn add_conn(id: u8, client: net.Address) LobbyErrors!void {
+	if (no_conns > 10)
+		return LobbyErrors.ServerFull;
+
+	for (conns, 0..conns.len) |con, i| {
+		if (con) |_| {}
+		else {
+			conns[i] = .{
+				.id = id,
+				.addr = client,
+			};
+			no_conns += 1;
+			break;
+		}
 	}
 }
 
