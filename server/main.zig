@@ -9,17 +9,17 @@ var addr = net.Address.initIp4(
 	12271, // default port
 );
 
+const MAX_PLAYERS = 10;
+
 // generic packet structure
-const Packet = [9]u8;
+const packetData = [8]u8;
+const packet = [1 + packetData.len]u8;
+// a packet is 1 byte for (id) and the rest of the packet
 
-var conns: [10]?struct{
-	id: u8,
-	addr: net.Address
-} = .{null} ** 10;
+var conns: [MAX_PLAYERS]?net.Address = .{null} ** MAX_PLAYERS;
 // support a maximum of 10 connections
+var positions: [MAX_PLAYERS]packetData = .{0} ** packetData.len ** MAX_PLAYERS;
 var no_conns: u8 = 0; // current number of connections
-
-var biggest_id: u8 = 0; // largest id till now
 
 const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
@@ -43,7 +43,7 @@ pub fn main() !void {
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	var buf: Packet = .{0} ** 9;
+	var buf: packet = .{0} ** 9;
 	// packet buffer
 	// refer to client networking for packet structure.
 
@@ -57,7 +57,13 @@ pub fn main() !void {
 		const id = buf[0]; // first byte of output is id
 		switch (id) {
 			0xff => {
-				const hi: Packet = .{new_id()} ++ .{0xff} ** 8;
+				const client_id = add_conn(client);
+				const hi = .{client_id} ++ .{0xff} ** 8;
+				// hi packet
+
+				// NOTE: the id of the player is the address's position in the
+				// conns array
+
 				posix.sendto(
 					sock,
 					hi[0..],
@@ -65,32 +71,28 @@ pub fn main() !void {
 					&client.any,
 					client.getOsSockLen(),
 				);
-
-				// TODO: handle full server
-				add_conn(hi[0], client) catch {};
 			},
-			else => update_position()
-				catch |err| return err,
+			else => update_position(buf, client)
+				catch |err| return err, // TODO: handle cheaters
 		}
 	}
 }
 
-// TODO: Long lived server will need to keep track which ids have already been
-// taken.
-inline fn new_id() u8 {
-	biggest_id += 1;
-	return biggest_id;
-}
+const PossibleCheaters = error{Impersonation};
+// Change global position data for client
+inline fn update_position(data: packet, client: net.Address) PossibleCheaters!void {
+	// perform sanity check that the clients are the same
+	const id = data[0];
+	if (conns[id].eql(client) == false)
+		return PossibleCheaters.Impersonation;
 
-inline fn update_position(id: u8, client: net.Address) !void {
-	_ = id;
-	_ = client;
+	positions[id] = data;
 	return void;
 }
 
 const LobbyErrors = error{ServerFull};
 // Add to the conns array
-inline fn add_conn(id: u8, client: net.Address) LobbyErrors!void {
+inline fn add_conn(id: u8, client: net.Address) LobbyErrors!u8 {
 	if (no_conns > 10)
 		return LobbyErrors.ServerFull;
 
@@ -102,7 +104,7 @@ inline fn add_conn(id: u8, client: net.Address) LobbyErrors!void {
 				.addr = client,
 			};
 			no_conns += 1;
-			break;
+			return i;
 		}
 	}
 }
