@@ -12,6 +12,15 @@ var addr: net.Address = net.Address.initIp4(
 ); // default server's address
 var server: std.fs.File = undefined; // read and write to server's file.
 var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
+var server_id: u8 = 0; // server side id
+
+// generic packet
+const packet = packed struct {
+	id: u8, // server network id
+	x: f32,
+	y: f32,
+	angle: f32, // gun rotation angle
+};
 
 pub fn init() !void {
 	assert(sock == null); // stops init() from being called twice
@@ -51,40 +60,48 @@ pub fn init() !void {
 		.handle = sock.?,
 	};
 	server_writer = server.writer();
+
+	// send hello and wait for hi
+	try hello();
+
+	// hi
+	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
+	_ = try server.read(buf[0..]);
+	// TODO: verify that the server has sent the correct packet back
+	server_id = buf[0];
+
+	// TODO: remove this, the client shouldn't have to care about how many
+	// players the server can support
+	assert(server_id < 10); // max players on the server's side
 }
+
+inline fn hello() !void {
+	const hello_packet: packet = packet{
+		.id = 0xff,
+		.x = 0xff,
+		.y = 0xff,
+		.angle = 0xff,
+	};
+	// TODO: send a username here
+	try server_writer.writeStruct(hello_packet);
+}
+
 
 pub fn deinit() void {
 	assert(sock != null); // make sure deinit() is not called before init
 	// posix.close(sock.?);
+	sock = null; // this will maybe be required when we want to reconnect
 	server.close(); // will this close the server writer ???
 }
 
-// send player position
-pub fn send_pos(x: f32, y: f32) !void {
-	const pos: packed struct {
-		x: f32,
-		y: f32,
-	} = .{.x = x, .y = y};
-	try server_writer.writeStruct(pos);
-}
-
-// for now, singular get position, does not get the position of all the
-// players, just one
-pub fn recv_pos() struct{x: f32, y: f32} {
-	var buf: [8]u8 = .{0} ** 8;
-	const n = server.read(buf[0..]);
-	assert(n == 8);
-
-	// What the hell is this
-	const x: f32 = @as(*f32, @alignCast(@ptrCast(&buf[0]))).*;
-	const y: f32 = @as(*f32, @alignCast(@ptrCast(&buf[4]))).*;
-	return .{.x = x, .y = y};
-}
+// const x: f32 = @as(*f32, @alignCast(@ptrCast(&buf[0]))).*;
+// const y: f32 = @as(*f32, @alignCast(@ptrCast(&buf[4]))).*;
 // Okay, I think I need to explain this ^
 // We read from the socket into the buffer of 8 bytes
 // then we cast the first 4 bytes and the last 4 bytes
 // I'm dereferencing the *f32 we get immediately in the hopes that all this
 // stuff stays in the registers so that alignment isn't broken.
+
 var buffer: [1024]u8 = .{0} ** 1024;
 pub fn recv_test() ![]u8 {
 	const n = try server.read(buffer[0..]);
