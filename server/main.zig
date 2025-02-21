@@ -28,7 +28,7 @@ const OP_MASK = 0b11110000; // get op from op + id
 const ops = enum(u8) {
 	HELLO = 0xf0,
 	NPACK = 0xe0, // new player ack
-	NOP = 0x00,
+	POS = 0x00,
 };
 
 const ParameterError = error{IncorrectArguments};
@@ -53,6 +53,10 @@ pub fn main() !void {
 
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
+
+	// start the postion broadcast thread
+	const pos_broadcaster = try std.Thread.spawn(.{}, position_broadcaster, .{});
+	defer pos_broadcaster.join();
 
 	var buf: packet = .{0} ** @sizeOf(packet);
 	// Wait for new packets
@@ -92,7 +96,7 @@ pub fn main() !void {
 				// TODO: do something about making sure everyone acknoledges
 				// the new player
 			},
-			else => update_position(buf, client)
+			.POS => update_position(buf, client)
 				catch |err| return err, // TODO: handle cheaters
 			// TODO: What if that address at that id is null ? Handle that case
 		}
@@ -153,14 +157,17 @@ inline fn update_position(data: packet, client: net.Address) PossibleCheaters!vo
 	return;
 }
 
-
-fn broadcast_handler() !void {
+// position broadcaster thread
+fn position_broadcaster() !void {
 	while (true) {
 		// TODO: probably needs like lerp or something with whatever timing we
 		// choose. We do this on the client, don't forget to do it.
 		std.time.sleep(std.time.ns_per_s * 0.5);
 		for (0..MAX_PLAYERS) |i|
-			if (conns[i]) |_| try broadcast(@intCast(i));
+			if (conns[i]) |_| {
+				const pack = [_]u8{@intCast(i)} ++ positions[i];
+				try broadcast(@intCast(i), pack);
+			};
 		// TODO: don't shit yourself if a single packet fails to send
 	}
 }
