@@ -133,6 +133,8 @@ pub fn main() !void {
 			for (lvl) |l| {
 				rl.DrawRectangleRec(l, rl.RAYWHITE);
 			}
+			// placeholder
+			// multiplayer.draw_others(); ???
 		}
 		try draw_references();
 

@@ -3,6 +3,9 @@ const net = std.net;
 const posix = std.posix;
 const assert = std.debug.assert;
 const stdout = std.io.getStdOut().writer();
+// This file contains all the client side networking code. It is not
+// responsible for how the networked data is draw, that is up to
+// multiplayer.zig
 
 const PORT = 12271; // default port
 var sock: ?posix.socket_t  = null; // client socket
@@ -86,7 +89,6 @@ inline fn hello() !void {
 	try server_writer.writeStruct(hello_packet);
 }
 
-
 pub fn deinit() void {
 	assert(sock != null); // make sure deinit() is not called before init
 	// posix.close(sock.?);
@@ -102,10 +104,18 @@ pub fn deinit() void {
 // I'm dereferencing the *f32 we get immediately in the hopes that all this
 // stuff stays in the registers so that alignment isn't broken.
 
-var buffer: [1024]u8 = .{0} ** 1024;
-pub fn recv_test() ![]u8 {
-	const n = try server.read(buffer[0..]);
-	return buffer[0..n];
+// get another player's packets from the server
+pub fn recv_packet() packet {
+	var p: packet = undefined;
+	server.read(&p);
+	return p;
+}
+
+pub fn recv_test() !void {
+	var buffer: [1024]u8 = .{0} ** 1024;
+	_ = try server.read(buffer[0..]);
+	std.debug.print("{}\n", .{buffer});
+	return;
 }
 
 // parse command line arguments
