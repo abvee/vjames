@@ -15,6 +15,7 @@ var addr: net.Address = net.Address.initIp4(
 ); // default server's address
 var server: std.fs.File = undefined; // read and write to server's file.
 var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
+const MAX_PLAYERS = 16;
 var server_id: u8 = 0; // server side id
 
 // generic packet
@@ -75,7 +76,7 @@ pub fn init() !void {
 
 	// TODO: remove this, the client shouldn't have to care about how many
 	// players the server can support
-	assert(server_id < 10); // max players on the server's side
+	assert(server_id < MAX_PLAYERS); // max players on the server's side
 }
 
 inline fn hello() !void {

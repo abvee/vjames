@@ -16,7 +16,7 @@ var addr = net.Address.initIp4(
 	[4]u8{0,0,0,0}, // accept connections from any address
 	12271, // default port
 );
-const MAX_PLAYERS = 10;
+const MAX_PLAYERS = 16;
 var conns: [MAX_PLAYERS]?net.Address = .{null} ** MAX_PLAYERS;
 // support a maximum of 10 connections
 var positions: [MAX_PLAYERS]packetData =
@@ -72,7 +72,7 @@ pub fn main() !void {
 			0xff => {
 				const client_id = try add_conn(client);
 				// TODO: handle server full use case
-				const hi = [1]u8{client_id} ++ .{0xff} ** 8;
+				const hi = [1]u8{client_id} ++ .{0xff} ** @sizeOf(packetData);
 				// hi packet
 
 				// NOTE: the id of the player is the address's position in the
