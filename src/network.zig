@@ -16,15 +16,17 @@ var addr: net.Address = net.Address.initIp4(
 var server: std.fs.File = undefined; // read and write to server's file.
 var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
 const MAX_PLAYERS = 16;
-var server_id: u8 = 0; // server side id
+var server_id: u8 = 0xff; // id assigned by the server
 
 // generic packet
 const packet = packed struct {
-	id: u8, // server network id
+	op: u4, // refer packet datasheet
+	id: u4,
 	x: f32,
 	y: f32,
 	angle: f32, // gun rotation angle
 };
+// NOTE: op and id may be combined
 
 pub fn init() !void {
 	assert(sock == null); // stops init() from being called twice
@@ -72,16 +74,15 @@ pub fn init() !void {
 	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
 	_ = try server.read(buf[0..]);
 	// TODO: verify that the server has sent the correct packet back
-	server_id = buf[0];
+	server_id = buf[0] - 0xf0; // refer packet datasheet
 
-	// TODO: remove this, the client shouldn't have to care about how many
-	// players the server can support
-	assert(server_id < MAX_PLAYERS); // max players on the server's side
+	assert(server_id < MAX_PLAYERS);
 }
 
 inline fn hello() !void {
 	const hello_packet: packet = packet{
-		.id = 0xff,
+		.op = 0xf,
+		.id = 0xf,
 		.x = 0xff,
 		.y = 0xff,
 		.angle = 0xff,

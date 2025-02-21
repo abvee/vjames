@@ -4,7 +4,6 @@ const posix = std.posix;
 const assert = std.debug.assert;
 const stdout = std.io.getStdOut().writer();
 
-
 // Types
 // generic packet structure
 const packetData = [12]u8;
@@ -67,20 +66,21 @@ pub fn main() !void {
 
 		_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
 
-		const id = buf[0]; // first byte of output is id
-		switch (id) {
+		const op_id = buf[0]; // first byte of packet is op + id
+		switch (op_id) {
 			0xff => {
 				const client_id = try add_conn(client);
 				// TODO: handle server full use case
-				const hi = [1]u8{client_id} ++ .{0xff} ** @sizeOf(packetData);
-				// hi packet
+
+				// hi packet. Refer packet datasheet
+				const hi = [1]u8{0xf0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
 
 				_ = try posix.sendto(
 					sock,
-					hi[0..],
+					&hi,
 					0,
 					&client.any,
 					client.getOsSockLen(),
@@ -113,9 +113,9 @@ inline fn update_position(data: packet, client: net.Address) PossibleCheaters!vo
 }
 
 const LobbyErrors = error{ServerFull};
-// Add to the conns array
+// Add to the conns array, return client's id.
 inline fn add_conn(client: net.Address) LobbyErrors!u8 {
-	if (no_conns > MAX_PLAYERS)
+	if (no_conns >= MAX_PLAYERS)
 		return LobbyErrors.ServerFull;
 
 	for (conns, 0..conns.len) |con, i| {
