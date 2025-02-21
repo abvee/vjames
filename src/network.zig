@@ -19,7 +19,7 @@ const MAX_PLAYERS = 16;
 var server_id: u8 = 0xff; // id assigned by the server
 
 // generic packet
-const packet = packed struct {
+pub const packet = packed struct {
 	op: u4, // refer packet datasheet
 	id: u4,
 	x: f32,
@@ -29,9 +29,13 @@ const packet = packed struct {
 const ops = enum(u4) {
 	HI = 0xf,
 	NP = 0xe, // new player
+	POS = 0x0, // position of player
 };
 const OP_MASK: u8 = 0b11110000; // get u4 from u8
 
+// init does the following things:
+// sends HELLO
+// recieves HI
 pub fn init() !void {
 	assert(sock == null); // stops init() from being called twice
 
@@ -138,7 +142,6 @@ fn get_ip(s: [*:0]const u8) []const u8 {
 }
 
 const netArgsErrors = error{NoPort};
-
 // i is the index of the ':' in the ip
 inline fn get_port(s: [*:0]const u8) !u16 {
 	var i: u8 = 1;

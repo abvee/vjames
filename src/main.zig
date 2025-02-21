@@ -4,15 +4,17 @@ const rl = @cImport({
 	@cInclude("raymath.h");
 	@cInclude("rlgl.h");
 });
-const RT2 = std.math.sqrt2;
 const level = @import("level.zig");
 const network = @import("network.zig");
+const multiplayer = @import("multiplayer.zig");
 
 const screen_width = 1440;
 const screen_height = 900;
 const SIDE = 40;
 const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
+const RT2 = std.math.sqrt2;
 
+// types
 const Player = struct {
 	x: f32,
 	y: f32,
@@ -24,6 +26,8 @@ const Gun = struct{
 	radius: f32 = 10.0,
 };
 
+var running: bool = true; // threads running bool
+
 pub fn main() !void {
 	// Allocator // TODO: replace with GPA
 	var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -33,10 +37,6 @@ pub fn main() !void {
 	// Initialise the network
 	try network.init();
 	defer network.deinit();
-
-	// DO NOT test network yet
-	// try network.send_pos(10.3, 0.3);
-	// std.debug.print("{any}\n", .{try network.recv_test()});
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");
@@ -138,6 +138,20 @@ pub fn main() !void {
 		}
 		try draw_references();
 
+	}
+}
+
+// constant tick thread
+// operations done in it need not be physics related
+fn physics() void {
+	while (running) {
+		const pack = network.recv_packet();
+		// TODO: loop through all the buffered packets and make the sockets non
+		// blocking
+		switch (pack.op) {
+			.POS => multiplayer.update_pos(pack),
+			else => {},
+		}
 	}
 }
 
