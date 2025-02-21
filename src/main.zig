@@ -10,7 +10,8 @@ const multiplayer = @import("multiplayer.zig");
 
 const screen_width = 1440;
 const screen_height = 900;
-const SIDE = 40;
+pub const SIDE = 40;
+pub const RADIUS = 10.0;
 const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
 const RT2 = std.math.sqrt2;
 
@@ -23,7 +24,7 @@ const Player = struct {
 
 const Gun = struct{
 	center: rl.Vector2,
-	radius: f32 = 10.0,
+	radius: f32 = RADIUS,
 };
 
 var running: bool = true; // threads running bool
@@ -134,7 +135,7 @@ pub fn main() !void {
 				rl.DrawRectangleRec(l, rl.RAYWHITE);
 			}
 			// placeholder
-			// multiplayer.draw_others(); ???
+			multiplayer.draw_others();
 		}
 		try draw_references();
 
