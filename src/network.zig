@@ -26,7 +26,11 @@ const packet = packed struct {
 	y: f32,
 	angle: f32, // gun rotation angle
 };
-// NOTE: op and id may be combined
+const ops = enum(u4) {
+	HI = 0xf,
+	NP = 0xe, // new player
+};
+const OP_MASK: u8 = 0b11110000; // get u4 from u8
 
 pub fn init() !void {
 	assert(sock == null); // stops init() from being called twice
@@ -73,9 +77,12 @@ pub fn init() !void {
 	// hi
 	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
 	_ = try server.read(buf[0..]);
-	// TODO: verify that the server has sent the correct packet back
-	server_id = buf[0] - 0xf0; // refer packet datasheet
-
+	// TODO: verify that the server has sent a hi packet back
+	// If the first packet we recive is another type of packet, it should be
+	// dropped.
+	// Here we just assume it's the correct one.
+	server_id = buf[0] & (~OP_MASK);
+	std.debug.print("server id is {x}\n", .{server_id});
 	assert(server_id < MAX_PLAYERS);
 }
 

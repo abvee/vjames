@@ -24,6 +24,13 @@ var positions: [MAX_PLAYERS]packetData =
 var no_conns: u8 = 0; // current number of connections
 var sockp: *const posix.socket_t = undefined;
 
+const OP_MASK = 0b11110000; // get op from op + id
+const ops = enum(u8) {
+	HELLO = 0xf0,
+	NPACK = 0xe0, // new player ack
+	NOP = 0x00,
+};
+
 const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
 
@@ -47,18 +54,7 @@ pub fn main() !void {
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	// start broadcasting
-	const broadcast_thread = try std.Thread.spawn(
-		.{},
-		broadcast_handler,
-		.{},
-	);
-	defer broadcast_thread.join();
-
 	var buf: packet = .{0} ** @sizeOf(packet);
-	// packet buffer
-	// refer to client networking for packet structure.
-
 	// Wait for new packets
 	while (true) {
 		var client: net.Address = undefined;
@@ -66,9 +62,10 @@ pub fn main() !void {
 
 		_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
 
-		const op_id = buf[0]; // first byte of packet is op + id
-		switch (op_id) {
-			0xff => {
+		const op: ops =
+			@enumFromInt(buf[0] & OP_MASK); // first byte of packet is op + id
+		switch (op) {
+			.HELLO => {
 				const client_id = try add_conn(client);
 				// TODO: handle server full use case
 
@@ -85,31 +82,21 @@ pub fn main() !void {
 					&client.any,
 					client.getOsSockLen(),
 				);
+
+				// new player packet
+				const new_player_packet =
+					[1]u8{0xe0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
+				try broadcast(client_id, new_player_packet);
+			},
+			.NPACK => {
+				// TODO: do something about making sure everyone acknoledges
+				// the new player
 			},
 			else => update_position(buf, client)
 				catch |err| return err, // TODO: handle cheaters
 			// TODO: What if that address at that id is null ? Handle that case
 		}
 	}
-}
-
-const PossibleCheaters = error{Impersonation};
-// Change global position data for client
-inline fn update_position(data: packet, client: net.Address) PossibleCheaters!void {
-	const id = data[0];
-
-	// check if a client even exists are that specified address
-	if (conns[id] == null)
-		return PossibleCheaters.Impersonation;
-
-	// perform sanity check that the clients are the same
-	if (conns[id].?.eql(client) == false)
-		return PossibleCheaters.Impersonation;
-
-	std.mem.copyForwards(u8, positions[id][0..], data[1..]);
-
-	std.debug.print("client: {}, position: {any}\n", .{client, positions[id]});
-	return;
 }
 
 const LobbyErrors = error{ServerFull};
@@ -132,9 +119,8 @@ inline fn add_conn(client: net.Address) LobbyErrors!u8 {
 	return LobbyErrors.ServerFull;
 }
 
-// broadcast id's position to all other players
-fn broadcast(id: u8) !void {
-	const pack: packet = [1]u8{id} ++ positions[id];
+// broadcast packet to everyone but id
+fn broadcast(id: u8, pack: packet) !void {
 	for (conns, 0..conns.len) |conn, i| {
 		if (i == id or conn == null)
 			continue; // skip our player and non existant player
@@ -145,10 +131,28 @@ fn broadcast(id: u8) !void {
 			&conn.?.any,
 			conn.?.getOsSockLen(),
 		);
-		// TODO: if sending fails, then we shouldn't just return from the
-		// program.
 	}
 }
+
+const PossibleCheaters = error{Impersonation};
+// Change global position data for client
+inline fn update_position(data: packet, client: net.Address) PossibleCheaters!void {
+	const id = data[0];
+
+	// check if a client even exists are that specified address
+	if (conns[id] == null)
+		return PossibleCheaters.Impersonation;
+
+	// perform sanity check that the clients are the same
+	if (conns[id].?.eql(client) == false)
+		return PossibleCheaters.Impersonation;
+
+	std.mem.copyForwards(u8, positions[id][0..], data[1..]);
+
+	std.debug.print("client: {}, position: {any}\n", .{client, positions[id]});
+	return;
+}
+
 
 fn broadcast_handler() !void {
 	while (true) {
