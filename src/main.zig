@@ -7,11 +7,12 @@ const rl = @cImport({
 const level = @import("level.zig");
 const network = @import("network.zig");
 const multiplayer = @import("multiplayer.zig");
+const constants = @import("constants.zig");
 
 const screen_width = 1440;
 const screen_height = 900;
-pub const SIDE = 40;
-pub const RADIUS = 10.0;
+const SIDE = constants.SIDE;
+const RADIUS = constants.RADIUS;
 const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
 const RT2 = std.math.sqrt2;
 

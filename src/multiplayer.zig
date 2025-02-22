@@ -4,6 +4,7 @@ const rl = @cImport({
 	@cInclude("raymath.h");
 	@cInclude("rlgl.h");
 });
+const constants = @import("constants.zig");
 const assert = std.debug.assert;
 const packet = @import("network.zig").packet;
 // This file contains all the drawing and parsing stuff for other players
@@ -11,8 +12,8 @@ const packet = @import("network.zig").packet;
 // network.zig.
 
 const MAX_PLAYERS = 16;
-const SIDE = @import("main.zig").SIDE;
-const RADIUS = @import("main.zig").RADIUS;
+const SIDE = constants.SIDE;
+const RADIUS = constants.RADIUS;
 
 // list of other players
 var others: [MAX_PLAYERS]?rl.Vector2 =
