@@ -25,7 +25,6 @@ const ops = enum(u4) {
 };
 
 // constants
-const OP_MASK = 0xf0; // get the (op) from 8 bits
 const MAX_PLAYERS = 16;
 // a large number for large buffers that cannot possibly overflow
 const BIG_BOI = 2048;
@@ -79,7 +78,7 @@ pub fn main() !void {
 		);
 
 		// get operation from first byte
-		const op: ops = @enumFromInt(buf[0] & OP_MASK);
+		const op: ops = @enumFromInt(buf[0] >> 4);
 
 		switch (op) {
 			.HELLO_HI => {
@@ -99,19 +98,15 @@ pub fn main() !void {
 					&client.any,
 					client.getOsSockLen(),
 				);
-
-				// send new player packets to everyone
-				const new_player_packet =
-					[1]u8{0xe0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
-				try broadcast(client_id, new_player_packet);
 			},
-			.NPACK => {
+			.NP_NPACK => {
 				// TODO: do something about making sure everyone acknoledges
 				// the new player
 			},
-			.POS => update_position(buf, client)
-				catch |err| return err, // TODO: handle cheaters
-			// TODO: What if that address at that id is null ? Handle that case
+			.POS => {
+				// TODO:
+				// something something position thread
+			},
 		}
 	}
 }
