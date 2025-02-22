@@ -12,8 +12,9 @@ const constants = @import("constants.zig");
 const screen_width = 1440;
 const screen_height = 900;
 const SIDE = constants.SIDE;
-const RADIUS = constants.RADIUS;
 const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
+const GUN_RADIUS = constants.GUN_RADIUS;
+const GUN_CIRCLE_RADIUS = constants.GUN_CIRCLE_RADIUS;
 const RT2 = constants.RT2;
 
 // types
@@ -25,7 +26,7 @@ const Player = struct {
 
 const Gun = struct{
 	center: rl.Vector2,
-	radius: f32 = RADIUS,
+	radius: f32 = GUN_RADIUS,
 };
 
 var running: bool = true; // threads running bool
@@ -63,9 +64,8 @@ pub fn main() !void {
 	// gun
 	var gun: Gun = Gun{
 		.center = undefined, // will be defined later
-		.radius = RADIUS,
+		.radius = GUN_RADIUS,
 	};
-	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
 
 	// camera
 	var camera: rl.Camera2D = rl.Camera2D{
@@ -112,8 +112,8 @@ pub fn main() !void {
 		const mouse_pos = rl.GetMousePosition();
 		const angle = std.math.atan2((mouse_pos.x - screen_width / 2) , (mouse_pos.y - screen_height / 2));
 		gun.center = rl.Vector2{
-			.x = gun_circle_radius * std.math.sin(angle) + player.x,
-			.y = gun_circle_radius * std.math.cos(angle) + player.y,
+			.x = GUN_CIRCLE_RADIUS * std.math.sin(angle) + player.x,
+			.y = GUN_CIRCLE_RADIUS * std.math.cos(angle) + player.y,
 		};
 
 		// update camera

@@ -77,13 +77,16 @@ pub inline fn draw_others() void {
 			};
 			rl.DrawRectangleRec(p, rl.ORANGE);
 
-			const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
 			rl.DrawCircleV(
 				rl.Vector2{
-					.x = gun_circle_radius * std.math.sin(angles[i]) + p.x,
-					.y = gun_circle_radius * std.math.cos(angles[i]) + p.y,
+					.x =
+						constants.GUN_CIRCLE_RADIUS * std.math.sin(angles[i])
+						+ p.x,
+					.y =
+						constants.GUN_CIRCLE_RADIUS * std.math.cos(angles[i])
+						+ p.y,
 				},
-				constants.RADIUS,
+				constants.GUN_RADIUS,
 				rl.BLUE,
 			);
 		};
