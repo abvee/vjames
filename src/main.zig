@@ -37,7 +37,8 @@ pub fn main() !void {
 	const allocator = arena.allocator();
 
 	// Initialise the network
-	try network.init();
+	const p = try network.init(allocator);
+	_ = p;
 	defer network.deinit();
 
 	// Init window
@@ -77,14 +78,6 @@ pub fn main() !void {
 
 	// level
 	const lvl = try level.load(allocator, "lvls/lvl2");
-
-	// start physics thread
-	const phy_thread = try std.Thread.spawn(.{}, physics, .{});
-	defer {
-		running = false;
-		phy_thread.join();
-	}
-
 
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
@@ -148,18 +141,6 @@ pub fn main() !void {
 		}
 		try draw_references();
 
-	}
-}
-
-// constant tick thread
-// operations done in it need not be physics related
-fn physics() void {
-	while (running) {
-		const pack = network.recv_packet();
-		// TODO: loop through all the buffered packets and make the sockets non
-		// blocking
-		if (pack.isNewPlayer())
-			multiplayer.add_player(pack);
 	}
 }
 

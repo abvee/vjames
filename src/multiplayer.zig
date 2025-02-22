@@ -11,7 +11,8 @@ const packet = @import("network.zig").packet;
 // This code will not have any network requests. the Client stuff will be in
 // network.zig.
 
-const MAX_PLAYERS = 16;
+// consts
+const MAX_PLAYERS = constants.MAX_PLAYERS;
 const SIDE = constants.SIDE;
 const RADIUS = constants.RADIUS;
 
