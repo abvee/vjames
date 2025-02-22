@@ -77,6 +77,14 @@ pub fn main() !void {
 	// level
 	const lvl = try level.load(allocator, "lvls/lvl2");
 
+	// start physics thread
+	const phy_thread = try std.Thread.spawn(.{}, physics, .{});
+	defer {
+		running = false;
+		phy_thread.join();
+	}
+
+
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
 		var collision: rl.Rectangle = player.box;
@@ -134,7 +142,7 @@ pub fn main() !void {
 			for (lvl) |l| {
 				rl.DrawRectangleRec(l, rl.RAYWHITE);
 			}
-			// placeholder
+
 			multiplayer.draw_others();
 		}
 		try draw_references();
@@ -149,10 +157,8 @@ fn physics() void {
 		const pack = network.recv_packet();
 		// TODO: loop through all the buffered packets and make the sockets non
 		// blocking
-		switch (pack.op) {
-			.POS => multiplayer.update_pos(pack),
-			else => {},
-		}
+		if (pack.isNewPlayer())
+			multiplayer.add_player(pack);
 	}
 }
 

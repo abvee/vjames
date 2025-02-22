@@ -4,6 +4,7 @@ const rl = @cImport({
 	@cInclude("raymath.h");
 	@cInclude("rlgl.h");
 });
+const assert = std.debug.assert;
 const packet = @import("network.zig").packet;
 // This file contains all the drawing and parsing stuff for other players
 // This code will not have any network requests. the Client stuff will be in
@@ -27,6 +28,17 @@ pub fn update(p: packet) void {
 
 	others[id] = rl.Vector2{p.x, p.y};
 	angles[id] = p.angle;
+}
+
+pub inline fn add_player(pac: packet) void {
+	// TODO: verify that the packet is actually correct
+
+	assert(others[pac.id] == null);
+	// TODO: for this assert to not trigger, disconnecting packets will have to
+	// be made
+	others[pac.id] = rl.Vector2{.x = pac.x, .y = pac.y};
+	angles[pac.id] = pac.angle;
+	std.debug.print("A player has been added !\n", .{});
 }
 
 // rl draw all the other players
