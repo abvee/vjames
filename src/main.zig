@@ -14,7 +14,7 @@ const screen_height = 900;
 const SIDE = constants.SIDE;
 const RADIUS = constants.RADIUS;
 const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
-const RT2 = std.math.sqrt2;
+const RT2 = constants.RT2;
 
 // types
 const Player = struct {
@@ -37,9 +37,10 @@ pub fn main() !void {
 	const allocator = arena.allocator();
 
 	// Initialise the network
-	const p = try network.init(allocator);
-	_ = p;
+	multiplayer.init(try network.init(allocator));
 	defer network.deinit();
+
+	multiplayer.debug_print();
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");
@@ -62,7 +63,7 @@ pub fn main() !void {
 	// gun
 	var gun: Gun = Gun{
 		.center = undefined, // will be defined later
-		.radius = SIDE / 4,
+		.radius = RADIUS,
 	};
 	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
 
@@ -136,7 +137,6 @@ pub fn main() !void {
 			for (lvl) |l| {
 				rl.DrawRectangleRec(l, rl.RAYWHITE);
 			}
-
 			multiplayer.draw_others();
 		}
 		try draw_references();

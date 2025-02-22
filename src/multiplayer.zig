@@ -13,7 +13,7 @@ const assert = std.debug.assert;
 // consts
 const MAX_PLAYERS = constants.MAX_PLAYERS;
 const SIDE = constants.SIDE;
-const RADIUS = constants.RADIUS;
+const RT2 = constants.RT2;
 
 // list of other players
 var others: [MAX_PLAYERS]?rl.Vector2 =
@@ -30,10 +30,7 @@ pub fn init(hi: []const u8) void {
 		i += 1;
 
 		// this avoid us accessing null later
-		others[id] = rl.Vector2{
-			.x = 0,
-			.y = 0,
-		};
+		others[id] = rl.Vector2{.x=0,.y=0};
 
 		var buf: [4]u8 = .{0} ** 4;
 
@@ -68,4 +65,31 @@ test "init" {
 }
 
 // rl draw all the other players
-pub inline fn draw_others() void { }
+pub inline fn draw_others() void {
+	for (others, 0..) |o, i|
+		if (o) |_| {
+			// other player rectangle
+			const p = rl.Rectangle{
+				.x = o.?.x - SIDE/2,
+				.y = o.?.y - SIDE/2,
+				.width = SIDE,
+				.height = SIDE,
+			};
+			rl.DrawRectangleRec(p, rl.ORANGE);
+
+			const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
+			rl.DrawCircleV(
+				rl.Vector2{
+					.x = gun_circle_radius * std.math.sin(angles[i]) + p.x,
+					.y = gun_circle_radius * std.math.cos(angles[i]) + p.y,
+				},
+				constants.RADIUS,
+				rl.BLUE,
+			);
+		};
+}
+
+pub inline fn debug_print() void {
+	for (others) |o|
+		std.debug.print("{any}\n", .{o});
+}
