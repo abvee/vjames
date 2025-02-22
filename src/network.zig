@@ -25,6 +25,12 @@ pub const packet = packed struct {
 	x: f32,
 	y: f32,
 	angle: f32, // gun rotation angle
+
+	pub fn isNewPlayer(self: packet) bool {
+		if (self.op == @intFromEnum(ops.NP))
+			return true;
+		return false;
+	}
 };
 const ops = enum(u4) {
 	HI = 0xf,
@@ -80,7 +86,9 @@ pub fn init() !void {
 
 	// hi
 	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
-	_ = try server.read(buf[0..]);
+	const n = try server.read(buf[0..]);
+	assert(n == 13); // The server deals in packets of size 13
+
 	// TODO: verify that the server has sent a hi packet back
 	// If the first packet we recive is another type of packet, it should be
 	// dropped.
@@ -119,9 +127,22 @@ pub fn deinit() void {
 
 // get another player's packets from the server
 pub fn recv_packet() packet {
-	var p: packet = undefined;
-	server.read(&p);
-	return p;
+
+	// Due to alignment, this is 16 bytes
+	var buf: [@sizeOf(packet)]u8 = .{0} ** @sizeOf(packet);
+
+	// hence we need a recive buffer that's 13 bytes
+	const rec_buf = buf[0..server.read(&buf) catch 0];
+	assert(rec_buf.len == @bitSizeOf(packet) / 8);
+	// TODO: this is going to crash if we get an incomplete packet
+
+	return packet{
+		.op = @intCast(rec_buf[0] >> 4),
+		.id = @intCast(rec_buf[0] & ~OP_MASK),
+		.x = 0,
+		.y = 0,
+		.angle = 0,
+	};
 }
 
 pub fn recv_test() !void {
