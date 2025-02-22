@@ -144,6 +144,8 @@ fn make_hi_pkt(id: u8, buf: []u8) u8 {
 	var j: u8 = 1; // buf index
 	// we then add each player's position
 	for (conns, 0..) |conn, i| {
+		if (i == id) continue; // skip our player
+
 		if (conn) |_| {
 			buf[j] = @intCast(i); // id of existing player
 			std.mem.copyForwards(
