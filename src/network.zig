@@ -3,6 +3,9 @@ const net = std.net;
 const posix = std.posix;
 const assert = std.debug.assert;
 const stdout = std.io.getStdOut().writer();
+// This file contains all the client side networking code. It is not
+// responsible for how the networked data is draw, that is up to
+// multiplayer.zig
 
 const PORT = 12271; // default port
 var sock: ?posix.socket_t  = null; // client socket
@@ -12,16 +15,27 @@ var addr: net.Address = net.Address.initIp4(
 ); // default server's address
 var server: std.fs.File = undefined; // read and write to server's file.
 var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
-var server_id: u8 = 0; // server side id
+const MAX_PLAYERS = 16;
+var server_id: u8 = 0xff; // id assigned by the server
 
 // generic packet
-const packet = packed struct {
-	id: u8, // server network id
+pub const packet = packed struct {
+	op: u4, // refer packet datasheet
+	id: u4,
 	x: f32,
 	y: f32,
 	angle: f32, // gun rotation angle
 };
+const ops = enum(u4) {
+	HI = 0xf,
+	NP = 0xe, // new player
+	POS = 0x0, // position of player
+};
+const OP_MASK: u8 = 0b11110000; // get u4 from u8
 
+// init does the following things:
+// sends HELLO
+// recieves HI
 pub fn init() !void {
 	assert(sock == null); // stops init() from being called twice
 
@@ -67,17 +81,19 @@ pub fn init() !void {
 	// hi
 	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
 	_ = try server.read(buf[0..]);
-	// TODO: verify that the server has sent the correct packet back
-	server_id = buf[0];
-
-	// TODO: remove this, the client shouldn't have to care about how many
-	// players the server can support
-	assert(server_id < 10); // max players on the server's side
+	// TODO: verify that the server has sent a hi packet back
+	// If the first packet we recive is another type of packet, it should be
+	// dropped.
+	// Here we just assume it's the correct one.
+	server_id = buf[0] & (~OP_MASK);
+	std.debug.print("server id is {x}\n", .{server_id});
+	assert(server_id < MAX_PLAYERS);
 }
 
 inline fn hello() !void {
 	const hello_packet: packet = packet{
-		.id = 0xff,
+		.op = 0xf,
+		.id = 0xf,
 		.x = 0xff,
 		.y = 0xff,
 		.angle = 0xff,
@@ -85,7 +101,6 @@ inline fn hello() !void {
 	// TODO: send a username here
 	try server_writer.writeStruct(hello_packet);
 }
-
 
 pub fn deinit() void {
 	assert(sock != null); // make sure deinit() is not called before init
@@ -102,10 +117,18 @@ pub fn deinit() void {
 // I'm dereferencing the *f32 we get immediately in the hopes that all this
 // stuff stays in the registers so that alignment isn't broken.
 
-var buffer: [1024]u8 = .{0} ** 1024;
-pub fn recv_test() ![]u8 {
-	const n = try server.read(buffer[0..]);
-	return buffer[0..n];
+// get another player's packets from the server
+pub fn recv_packet() packet {
+	var p: packet = undefined;
+	server.read(&p);
+	return p;
+}
+
+pub fn recv_test() !void {
+	var buffer: [1024]u8 = .{0} ** 1024;
+	_ = try server.read(buffer[0..]);
+	std.debug.print("{}\n", .{buffer});
+	return;
 }
 
 // parse command line arguments
@@ -119,7 +142,6 @@ fn get_ip(s: [*:0]const u8) []const u8 {
 }
 
 const netArgsErrors = error{NoPort};
-
 // i is the index of the ':' in the ip
 inline fn get_port(s: [*:0]const u8) !u16 {
 	var i: u8 = 1;

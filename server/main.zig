@@ -4,25 +4,32 @@ const posix = std.posix;
 const assert = std.debug.assert;
 const stdout = std.io.getStdOut().writer();
 
-var addr = net.Address.initIp4(
-	[4]u8{0,0,0,0}, // accept connections from any address
-	12271, // default port
-);
-
-const MAX_PLAYERS = 10;
-
+// Types
 // generic packet structure
 const packetData = [12]u8;
 const packet = [1 + @sizeOf(packetData)]u8;
 // a packet is 1 byte for (id) and the rest of the packet
 
+// globals
+var addr = net.Address.initIp4(
+	[4]u8{0,0,0,0}, // accept connections from any address
+	12271, // default port
+);
+const MAX_PLAYERS = 16;
 var conns: [MAX_PLAYERS]?net.Address = .{null} ** MAX_PLAYERS;
 // support a maximum of 10 connections
 var positions: [MAX_PLAYERS]packetData =
 	[_][@sizeOf(packetData)]u8{[_]u8{0} ** @sizeOf(packetData)} ** MAX_PLAYERS;
 // [10][8]u8{0 filled};
-
 var no_conns: u8 = 0; // current number of connections
+var sockp: *const posix.socket_t = undefined;
+
+const OP_MASK = 0b11110000; // get op from op + id
+const ops = enum(u8) {
+	HELLO = 0xf0,
+	NPACK = 0xe0, // new player ack
+	POS = 0x00,
+};
 
 const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
@@ -41,45 +48,93 @@ pub fn main() !void {
 		posix.SOCK.DGRAM,
 		posix.IPPROTO.UDP,
 	);
+	sockp = &sock;
 	defer posix.close(sock);
 
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
-	var buf: packet = .{0} ** @sizeOf(packet);
-	// packet buffer
-	// refer to client networking for packet structure.
+	// start the postion broadcast thread
+	const pos_broadcaster = try std.Thread.spawn(.{}, position_broadcaster, .{});
+	defer pos_broadcaster.join();
 
-	// wait for packets
+	var buf: packet = .{0} ** @sizeOf(packet);
+	// Wait for new packets
 	while (true) {
 		var client: net.Address = undefined;
 		var client_len: posix.socklen_t = @sizeOf(net.Address);
 
 		_ = try posix.recvfrom(sock, buf[0..], 0, &client.any, &client_len);
 
-		const id = buf[0]; // first byte of output is id
-		switch (id) {
-			0xff => {
+		const op: ops =
+			@enumFromInt(buf[0] & OP_MASK); // first byte of packet is op + id
+		switch (op) {
+			.HELLO => {
 				const client_id = try add_conn(client);
 				// TODO: handle server full use case
-				const hi = [1]u8{client_id} ++ .{0xff} ** 8;
-				// hi packet
+
+				// hi packet. Refer packet datasheet
+				const hi = [1]u8{0xf0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
 
 				_ = try posix.sendto(
 					sock,
-					hi[0..],
+					&hi,
 					0,
 					&client.any,
 					client.getOsSockLen(),
 				);
+
+				// new player packet
+				const new_player_packet =
+					[1]u8{0xe0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
+				try broadcast(client_id, new_player_packet);
 			},
-			else => update_position(buf, client)
+			.NPACK => {
+				// TODO: do something about making sure everyone acknoledges
+				// the new player
+			},
+			.POS => update_position(buf, client)
 				catch |err| return err, // TODO: handle cheaters
 			// TODO: What if that address at that id is null ? Handle that case
 		}
+	}
+}
+
+const LobbyErrors = error{ServerFull};
+// Add to the conns array, return client's id.
+inline fn add_conn(client: net.Address) LobbyErrors!u8 {
+	if (no_conns >= MAX_PLAYERS)
+		return LobbyErrors.ServerFull;
+
+	for (conns, 0..conns.len) |con, i| {
+		if (con) |_| {}
+		else {
+			conns[i] = client;
+			no_conns += 1;
+			std.debug.print("Added client: {}\n", .{client});
+			return @intCast(i);
+		}
+	}
+
+	// this should never be reached
+	return LobbyErrors.ServerFull;
+}
+
+// broadcast packet to everyone but id
+fn broadcast(id: u8, pack: packet) !void {
+	for (conns, 0..conns.len) |conn, i| {
+		if (i == id or conn == null)
+			continue; // skip our player and non existant player
+		_ = try posix.sendto(
+			sockp.*,
+			&pack,
+			0,
+			&conn.?.any,
+			conn.?.getOsSockLen(),
+		);
 	}
 }
 
@@ -102,24 +157,19 @@ inline fn update_position(data: packet, client: net.Address) PossibleCheaters!vo
 	return;
 }
 
-const LobbyErrors = error{ServerFull};
-// Add to the conns array
-inline fn add_conn(client: net.Address) LobbyErrors!u8 {
-	if (no_conns > 10)
-		return LobbyErrors.ServerFull;
-
-	for (conns, 0..conns.len) |con, i| {
-		if (con) |_| {}
-		else {
-			conns[i] = client;
-			no_conns += 1;
-			std.debug.print("Added client: {}\n", .{client});
-			return @intCast(i);
-		}
+// position broadcaster thread
+fn position_broadcaster() !void {
+	while (true) {
+		// TODO: probably needs like lerp or something with whatever timing we
+		// choose. We do this on the client, don't forget to do it.
+		std.time.sleep(std.time.ns_per_s * 0.5);
+		for (0..MAX_PLAYERS) |i|
+			if (conns[i]) |_| {
+				const pack = [_]u8{@intCast(i)} ++ positions[i];
+				try broadcast(@intCast(i), pack);
+			};
+		// TODO: don't shit yourself if a single packet fails to send
 	}
-
-	// this should never be reached
-	return LobbyErrors.ServerFull;
 }
 
 // get port from the command line and return it
