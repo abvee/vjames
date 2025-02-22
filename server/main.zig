@@ -74,20 +74,21 @@ pub fn main() !void {
 				// TODO: handle server full use case
 
 				// hi packet. Refer packet datasheet
-				const hi = [1]u8{0xf0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
+				var hi: [1 + @sizeOf(packet) * MAX_PLAYERS]u8 = undefined;
+				const n = make_hi_pkt(client_id, &hi);
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
 
 				_ = try posix.sendto(
 					sock,
-					&hi,
+					hi[0..n],
 					0,
 					&client.any,
 					client.getOsSockLen(),
 				);
 
-				// new player packet
+				// send new player packets to everyone
 				const new_player_packet =
 					[1]u8{0xe0 + client_id} ++ .{0xff} ** @sizeOf(packetData);
 				try broadcast(client_id, new_player_packet);
@@ -121,6 +122,25 @@ inline fn add_conn(client: net.Address) LobbyErrors!u8 {
 
 	// this should never be reached
 	return LobbyErrors.ServerFull;
+}
+
+// make hi packet for that client 
+// return length of that packet
+fn make_hi_pkt(id: u8, buf: []u8) u8 {
+	assert(id < MAX_PLAYERS);
+	// the first byte is still op:id
+	buf[0] = 0xf0 + id;
+	var j: u8 = 1; // buf index
+
+	// we then add each player's position
+	for (conns, 0..) |conn, i| {
+		if (conn) |_| {
+			std.mem.copyForwards(u8, buf[j..j+@sizeOf(packet)], &([_]u8{@intCast(i)} ++ positions[i]));
+			j += @sizeOf(packet);
+		}
+	}
+
+	return j; // return that index
 }
 
 // broadcast packet to everyone but id
