@@ -37,12 +37,13 @@ const ops = enum(u4) {
 	NP = 0xe, // new player
 	POS = 0x0, // position of player
 };
-const OP_MASK: u8 = 0b11110000; // get u4 from u8
+const OP_MASK: u8 = 0xf0; // get u4 from u8
 
 // init does the following things:
-// sends HELLO
-// recieves HI
-pub fn init() !void {
+// sends HELLO pkt
+// allocate for HI pkt
+// return HI pkt
+pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	assert(sock == null); // stops init() from being called twice
 
 	// set cmdline sockaddr
@@ -84,10 +85,14 @@ pub fn init() !void {
 	// send hello and wait for hi
 	try hello();
 
-	// hi
-	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
+	// hi packet
+	var buf: [2048]u8 = [_]u8{0} ** 2048;
+	// hi packet is now repurposed.
 	const n = try server.read(buf[0..]);
-	assert(n == 13); // The server deals in packets of size 13
+
+	// we ignore the first byte, that's for the client to deal with.
+	const hi: []u8 = try allocator.alloc(u8, n);
+	std.mem.copyForwards(u8, hi, buf[0..n]);
 
 	// TODO: verify that the server has sent a hi packet back
 	// If the first packet we recive is another type of packet, it should be
@@ -96,6 +101,7 @@ pub fn init() !void {
 	server_id = buf[0] & (~OP_MASK);
 	std.debug.print("server id is {x}\n", .{server_id});
 	assert(server_id < MAX_PLAYERS);
+	return hi;
 }
 
 inline fn hello() !void {
