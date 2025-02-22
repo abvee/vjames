@@ -19,7 +19,7 @@ const MAX_PLAYERS = 16;
 var server_id: u8 = 0xff; // id assigned by the server
 
 // generic packet
-pub const packet = struct {
+pub const packet = packed struct {
 	op: u4, // refer packet datasheet
 	id: u4,
 	x: f32,
@@ -80,7 +80,9 @@ pub fn init() !void {
 
 	// hi
 	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
-	_ = try server.read(buf[0..]);
+	const n = try server.read(buf[0..]);
+	assert(n == 13); // The server deals in packets of size 13
+
 	// TODO: verify that the server has sent a hi packet back
 	// If the first packet we recive is another type of packet, it should be
 	// dropped.
@@ -91,13 +93,7 @@ pub fn init() !void {
 }
 
 inline fn hello() !void {
-	const hello_packet: packed struct {
-		op: u4, // refer packet datasheet
-		id: u4,
-		x: f32,
-		y: f32,
-		angle: f32, // gun rotation angle
-	} = .{
+	const hello_packet: packet = packet{
 		.op = 0xf,
 		.id = 0xf,
 		.x = 0xff,
