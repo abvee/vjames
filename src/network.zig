@@ -30,6 +30,7 @@ pub const packet = packed struct {
 	y: f32,
 	angle: f32, // gun rotation angle
 };
+
 const ops = enum(u4) {
 	HELLO_HI = 0xf,
 	NP_NPACK = 0xe, // new player

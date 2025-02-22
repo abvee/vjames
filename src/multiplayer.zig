@@ -6,7 +6,6 @@ const rl = @cImport({
 });
 const constants = @import("constants.zig");
 const assert = std.debug.assert;
-const packet = @import("network.zig").packet;
 // This file contains all the drawing and parsing stuff for other players
 // This code will not have any network requests. the Client stuff will be in
 // network.zig.
@@ -22,37 +21,51 @@ var others: [MAX_PLAYERS]?rl.Vector2 =
 // angles of the other players
 var angles: [MAX_PLAYERS]f32 = [_]f32{0.0} ** MAX_PLAYERS;
 
-pub fn update(p: packet) void {
-	const id: u8 = @intCast(p.id);
+// take a hi packet and initialise the others list
+pub fn init(hi: []const u8) void {
+	var i: usize = 0; // hi index
 
-	// Make sure that the player we're talking about hasn't disconnected
-	if (others[id] == null) return;
+	while (i < hi.len) {
+		const id = hi[i]; // id of that client
+		i += 1;
 
-	others[id] = rl.Vector2{p.x, p.y};
-	angles[id] = p.angle;
+		// this avoid us accessing null later
+		others[id] = rl.Vector2{
+			.x = 0,
+			.y = 0,
+		};
+
+		var buf: [4]u8 = .{0} ** 4;
+
+		// I like to have some meta programming fun
+		inline for (@typeInfo(rl.Vector2).Struct.fields) |field| {
+			std.mem.copyForwards(u8, &buf, hi[i..i+4]);
+			@field(others[id].?, field.name)
+				= @bitCast(std.mem.readInt(u32, &buf, .little));
+			i+=4;
+		}
+		// This ^ basically deserializes that byte into the correct fields of
+		// rl.Vector 2
+
+		std.mem.copyForwards(u8, &buf, hi[i..i+4]);
+		angles[id] = @bitCast(std.mem.readInt(u32, &buf, .little));
+		i+=4;
+	}
 }
-
-pub inline fn add_player(pac: packet) void {
-	// TODO: verify that the packet is actually correct
-
-	assert(others[pac.id] == null);
-	// TODO: for this assert to not trigger, disconnecting packets will have to
-	// be made
-	others[pac.id] = rl.Vector2{.x = pac.x, .y = pac.y};
-	angles[pac.id] = pac.angle;
-	std.debug.print("A player has been added !\n", .{});
+test "init" {
+	const hi = [_]u8{
+		1,
+		0x01,0x00,0x00,0x00,
+		0x01,0x00,0x00,0x00,
+		0x01,0x00,0x00,0x00,
+	};
+	std.debug.print("{d}\n", .{@sizeOf(@TypeOf(hi))});
+	init(hi[0..]);
+	std.debug.print("{any}\n{}\n", .{
+		others[1],
+		angles[1],
+	});
 }
 
 // rl draw all the other players
-pub inline fn draw_others() void {
-	for (others) |player| {
-		if (player == null) continue;
-
-		const pos: rl.Vector2 = rl.Vector2{
-			.x = player.?.x - SIDE / 2,
-			.y = player.?.y - SIDE / 2,
-		};
-		rl.DrawRectangleV(pos, .{.x=SIDE,.y=SIDE}, rl.ORANGE);
-		rl.DrawCircleV(player.?, RADIUS, rl.BLUE);
-	}
-}
+pub inline fn draw_others() void { }
