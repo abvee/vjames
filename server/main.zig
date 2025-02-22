@@ -98,6 +98,16 @@ pub fn main() !void {
 					&client.any,
 					client.getOsSockLen(),
 				);
+
+				// new player packet
+				const new_player: packet = packet{
+					.op = @enumFromInt(ops.NP_NPACK),
+					.id = client_id, // id of the new player
+					.x = 0,
+					.y = 0,
+					.angle = 0,
+				};
+				broadcast(client_id, new_player);
 			},
 			.NP_NPACK => {
 				// TODO: do something about making sure everyone acknoledges
@@ -172,7 +182,7 @@ fn broadcast(id: u8, pack: packet) !void {
 			continue; // skip our player and non existant player
 		_ = try posix.sendto(
 			sockp.*,
-			&pack,
+			std.mem.asBytes(&pack),
 			0,
 			&conn.?.any,
 			conn.?.getOsSockLen(),
