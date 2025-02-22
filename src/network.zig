@@ -19,7 +19,7 @@ const MAX_PLAYERS = 16;
 var server_id: u8 = 0xff; // id assigned by the server
 
 // generic packet
-pub const packet = packed struct {
+pub const packet = struct {
 	op: u4, // refer packet datasheet
 	id: u4,
 	x: f32,
@@ -91,7 +91,13 @@ pub fn init() !void {
 }
 
 inline fn hello() !void {
-	const hello_packet: packet = packet{
+	const hello_packet: packed struct {
+		op: u4, // refer packet datasheet
+		id: u4,
+		x: f32,
+		y: f32,
+		angle: f32, // gun rotation angle
+	} = .{
 		.op = 0xf,
 		.id = 0xf,
 		.x = 0xff,
