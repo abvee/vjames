@@ -1,22 +1,26 @@
 const std = @import("std");
 const net = std.net;
 const posix = std.posix;
+const constants = @import("constants.zig");
 const assert = std.debug.assert;
 const stdout = std.io.getStdOut().writer();
 // This file contains all the client side networking code. It is not
 // responsible for how the networked data is draw, that is up to
 // multiplayer.zig
 
+const MAX_PLAYERS = constants.MAX_PLAYERS;
 const PORT = 12271; // default port
+const OP_MASK: u8 = 0xf0; // get u4 from u8
+const BIG_BOI = 2048; // big array number that will never overflow
+
 var sock: ?posix.socket_t  = null; // client socket
 var addr: net.Address = net.Address.initIp4(
 	[4]u8{127,0,0,1},
 	PORT,
-); // default server's address
+); // server's default address
 var server: std.fs.File = undefined; // read and write to server's file.
 var server_writer: std.fs.File.Writer = undefined; // read and write to server's file.
-const MAX_PLAYERS = 16;
-var server_id: u8 = 0xff; // id assigned by the server
+var server_id: u8 = undefined; // id assigned by the server
 
 // generic packet
 pub const packet = packed struct {
@@ -25,24 +29,19 @@ pub const packet = packed struct {
 	x: f32,
 	y: f32,
 	angle: f32, // gun rotation angle
-
-	pub fn isNewPlayer(self: packet) bool {
-		if (self.op == @intFromEnum(ops.NP))
-			return true;
-		return false;
-	}
 };
+
 const ops = enum(u4) {
-	HI = 0xf,
-	NP = 0xe, // new player
+	HELLO_HI = 0xf,
+	NP_NPACK = 0xe, // new player
 	POS = 0x0, // position of player
 };
-const OP_MASK: u8 = 0b11110000; // get u4 from u8
 
 // init does the following things:
-// sends HELLO
-// recieves HI
-pub fn init() !void {
+// sends HELLO pkt
+// allocate for HI pkt
+// return HI pkt
+pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	assert(sock == null); // stops init() from being called twice
 
 	// set cmdline sockaddr
@@ -84,28 +83,35 @@ pub fn init() !void {
 	// send hello and wait for hi
 	try hello();
 
-	// hi
-	var buf: [@sizeOf(packet)]u8 = [_]u8{0} ** @sizeOf(packet);
+	// hi packet
+	var buf: [BIG_BOI]u8 = [_]u8{0} ** BIG_BOI;
 	const n = try server.read(buf[0..]);
-	assert(n == 13); // The server deals in packets of size 13
 
+	// first byte of the hi packet is the id
+	server_id = buf[0] & (~OP_MASK);
+	std.debug.print("server id is {x}\n", .{server_id});
+	assert(server_id < MAX_PLAYERS);
 	// TODO: verify that the server has sent a hi packet back
 	// If the first packet we recive is another type of packet, it should be
 	// dropped.
 	// Here we just assume it's the correct one.
-	server_id = buf[0] & (~OP_MASK);
-	std.debug.print("server id is {x}\n", .{server_id});
-	assert(server_id < MAX_PLAYERS);
+
+	// copy the rest of the hi packet
+	const hi: []u8 = try allocator.alloc(u8, n - 1);
+	std.mem.copyForwards(u8, hi, buf[1..n]);
+
+	return hi;
 }
 
 inline fn hello() !void {
 	const hello_packet: packet = packet{
 		.op = 0xf,
 		.id = 0xf,
-		.x = 0xff,
-		.y = 0xff,
-		.angle = 0xff,
+		.x = 0,
+		.y = 0,
+		.angle = 0,
 	};
+
 	// TODO: send a username here
 	try server_writer.writeStruct(hello_packet);
 }

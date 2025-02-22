@@ -7,13 +7,14 @@ const rl = @cImport({
 const level = @import("level.zig");
 const network = @import("network.zig");
 const multiplayer = @import("multiplayer.zig");
+const constants = @import("constants.zig");
 
 const screen_width = 1440;
 const screen_height = 900;
-pub const SIDE = 40;
-pub const RADIUS = 10.0;
+const SIDE = constants.SIDE;
+const RADIUS = constants.RADIUS;
 const SPEED = @as(f32, @floatFromInt(SIDE)) / 400.0;
-const RT2 = std.math.sqrt2;
+const RT2 = constants.RT2;
 
 // types
 const Player = struct {
@@ -36,8 +37,10 @@ pub fn main() !void {
 	const allocator = arena.allocator();
 
 	// Initialise the network
-	try network.init();
+	multiplayer.init(try network.init(allocator));
 	defer network.deinit();
+
+	multiplayer.debug_print();
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");
@@ -60,7 +63,7 @@ pub fn main() !void {
 	// gun
 	var gun: Gun = Gun{
 		.center = undefined, // will be defined later
-		.radius = SIDE / 4,
+		.radius = RADIUS,
 	};
 	const gun_circle_radius = RT2 * SIDE / 2.0 + SIDE / 4;
 
@@ -76,14 +79,6 @@ pub fn main() !void {
 
 	// level
 	const lvl = try level.load(allocator, "lvls/lvl2");
-
-	// start physics thread
-	const phy_thread = try std.Thread.spawn(.{}, physics, .{});
-	defer {
-		running = false;
-		phy_thread.join();
-	}
-
 
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
@@ -142,23 +137,10 @@ pub fn main() !void {
 			for (lvl) |l| {
 				rl.DrawRectangleRec(l, rl.RAYWHITE);
 			}
-
 			multiplayer.draw_others();
 		}
 		try draw_references();
 
-	}
-}
-
-// constant tick thread
-// operations done in it need not be physics related
-fn physics() void {
-	while (running) {
-		const pack = network.recv_packet();
-		// TODO: loop through all the buffered packets and make the sockets non
-		// blocking
-		if (pack.isNewPlayer())
-			multiplayer.add_player(pack);
 	}
 }
 
