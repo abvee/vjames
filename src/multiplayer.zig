@@ -10,6 +10,9 @@ const assert = std.debug.assert;
 // This code will not have any network requests. the Client stuff will be in
 // network.zig.
 
+// types
+const packet = @import("network.zig").packet;
+
 // consts
 const MAX_PLAYERS = constants.MAX_PLAYERS;
 const SIDE = constants.SIDE;
@@ -95,4 +98,18 @@ pub inline fn draw_others() void {
 pub inline fn debug_print() void {
 	for (others) |o|
 		std.debug.print("{any}\n", .{o});
+}
+
+// add the player specified by new packet
+pub inline fn add_player(p: packet) void {
+
+	std.debug.print("Added player with id: {}\n", .{p.id});
+	// previous player not disconnected
+	// if (others[p.id] != null)
+		// TODO: do something about the previous player being there
+	others[p.id] = rl.Vector2{
+		.x = p.x,
+		.y = p.x,
+	};
+	angles[p.id] = p.angle;
 }

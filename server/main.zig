@@ -83,6 +83,7 @@ pub fn main() !void {
 		switch (op) {
 			.HELLO_HI => {
 				const client_id = try add_conn(client);
+				std.debug.print("Client ID: {}\n", .{client_id});
 				// TODO: handle server full use case
 
 				// buffer for hi packet
@@ -98,6 +99,19 @@ pub fn main() !void {
 					&client.any,
 					client.getOsSockLen(),
 				);
+
+				// new player packet
+				const new_player: packet = packet{
+					.op = @intFromEnum(ops.NP_NPACK),
+					.id = @intCast(client_id & 0x0f), // id of the new player
+					.x = 0,
+					.y = 0,
+					.angle = 0,
+				};
+				broadcast(client_id, new_player) catch {};
+				// TODO: do something if the broadcast fails ?
+				// will that even be our concern at that point ?
+				// Idk just redo it ig ?
 			},
 			.NP_NPACK => {
 				// TODO: do something about making sure everyone acknoledges
@@ -139,7 +153,6 @@ fn make_hi_pkt(id: u8, buf: []u8) u8 {
 	// the first byte is still op:id
 	buf[0] = @intFromEnum(ops.HELLO_HI);
 	buf[0] = (buf[0] << 4) + id;
-	std.debug.print("buf[0]: {x}\n", .{buf[0]});
 
 	var j: u8 = 1; // buf index
 	// we then add each player's position
@@ -172,7 +185,7 @@ fn broadcast(id: u8, pack: packet) !void {
 			continue; // skip our player and non existant player
 		_ = try posix.sendto(
 			sockp.*,
-			&pack,
+			std.mem.asBytes(&pack),
 			0,
 			&conn.?.any,
 			conn.?.getOsSockLen(),
