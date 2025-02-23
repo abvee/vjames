@@ -29,6 +29,12 @@ pub const packet = packed struct {
 	x: f32,
 	y: f32,
 	angle: f32, // gun rotation angle
+
+	pub inline fn isNewPacket(self: packet) bool {
+		if (self.op == @intFromEnum(ops.NP_NPACK))
+			return true;
+		return false;
+	}
 };
 
 const ops = enum(u4) {
@@ -135,27 +141,13 @@ pub fn deinit() void {
 pub fn recv_packet() packet {
 
 	// Due to alignment, this is 16 bytes
-	var buf: [@sizeOf(packet)]u8 = .{0} ** @sizeOf(packet);
+	var buf: [@bitSizeOf(packet)/8]u8 = .{0} ** (@bitSizeOf(packet)/8);
 
 	// hence we need a recive buffer that's 13 bytes
-	const rec_buf = buf[0..server.read(&buf) catch 0];
-	assert(rec_buf.len == @bitSizeOf(packet) / 8);
+	_ = server.read(&buf) catch {};
 	// TODO: this is going to crash if we get an incomplete packet
 
-	return packet{
-		.op = @intCast(rec_buf[0] >> 4),
-		.id = @intCast(rec_buf[0] & ~OP_MASK),
-		.x = 0,
-		.y = 0,
-		.angle = 0,
-	};
-}
-
-pub fn recv_test() !void {
-	var buffer: [1024]u8 = .{0} ** 1024;
-	_ = try server.read(buffer[0..]);
-	std.debug.print("{}\n", .{buffer});
-	return;
+	return @bitCast(buf);
 }
 
 // parse command line arguments

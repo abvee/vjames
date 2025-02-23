@@ -41,7 +41,7 @@ pub fn main() !void {
 	multiplayer.init(try network.init(allocator));
 	defer network.deinit();
 
-	multiplayer.debug_print();
+	// multiplayer.debug_print();
 
 	// Init window
 	rl.InitWindow(screen_width, screen_height, "game");
@@ -79,6 +79,11 @@ pub fn main() !void {
 
 	// level
 	const lvl = try level.load(allocator, "lvls/lvl2");
+
+	// server reciever thread
+	_ = try std.Thread.spawn(.{}, net_recieve, .{});
+	defer running = false;
+	// TODO: don't defer join this thread until the socket is non-blocking
 
 	// Main game loop
 	while (!rl.WindowShouldClose()) {
@@ -140,7 +145,16 @@ pub fn main() !void {
 			multiplayer.draw_others();
 		}
 		try draw_references();
+	}
+}
 
+// get data from the server
+fn net_recieve() void {
+	while (running) {
+		const p = network.recv_packet();
+		// it's waiting for a packet'
+		if (p.isNewPacket())
+			multiplayer.add_player(p);
 	}
 }
 
