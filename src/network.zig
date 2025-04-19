@@ -29,8 +29,13 @@ pub const packet = packed struct {
 	y: f32,
 	angle: f32, // gun rotation angle
 
-	pub inline fn isNewPacket(self: packet) bool {
+	pub inline fn isNewPlayerPacket(self: packet) bool {
 		if (self.op == @intFromEnum(ops.NP_NPACK))
+			return true;
+		return false;
+	}
+	pub inline fn isPosPacket(self: packet) bool {
+		if (self.op == @intFromEnum(ops.POS))
 			return true;
 		return false;
 	}
