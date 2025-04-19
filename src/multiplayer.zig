@@ -103,13 +103,14 @@ pub inline fn draw_others() void {
 
 pub inline fn debug_print() void {
 	for (others) |o|
-		stdout.print("{any}\n", .{o});
+		stdout.print("{any}\n", .{o}) catch {};
 }
 
 // add the player specified by new packet
 pub inline fn add_player(p: packet) void {
 
-	stdout.print("Added player with id: {}\n", .{p.id});
+	stdout.print("Added player with id: {}\n", .{p.id})
+		catch {};
 	// previous player not disconnected
 	// if (others[p.id] != null)
 		// TODO: do something about the previous player being there

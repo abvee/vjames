@@ -51,7 +51,8 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 
 	// set cmdline sockaddr
 	if (std.os.argv.len < 2)
-		try stdout.print("No Address specified, using default\n", .{})
+		stdout.print("No Address specified, using default\n", .{})
+			catch {}
 	else {
 		const ip = get_ip(std.os.argv[1]);
 		addr = try net.Address.parseIp(
@@ -64,7 +65,7 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 		);
 	}
 
-	stdout.print("Connecting to {}\n", .{addr});
+	stdout.print("Connecting to {}\n", .{addr}) catch {};
 
 	// socket and connect
 	sock = try posix.socket(
@@ -99,7 +100,7 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 
 	// client id
 	server_id = hipkt[1];
-	stdout.print("Your id is {x}\n", .{server_id});
+	stdout.print("Your id is {x}\n", .{server_id}) catch {};
 	assert(server_id < MAX_PLAYERS);
 
 	const hi: []u8 = try allocator.alloc(u8, hipkt_len);
@@ -138,6 +139,17 @@ pub fn recv_packet() packet {
 	// TODO: this is going to crash if we get an incomplete packet
 
 	return @bitCast(buf);
+}
+
+pub fn send_pos(x: f32, y: f32, angle: f32) !void {
+	const p: packet = packet{
+		.op = @intFromEnum(ops.POS),
+		.id = server_id,
+		.x = x,
+		.y = y,
+		.angle = angle,
+	};
+	_ = try server.write(std.mem.asBytes(&p));
 }
 
 // parse command line arguments

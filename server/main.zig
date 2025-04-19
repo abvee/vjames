@@ -40,6 +40,7 @@ var no_conns: u8 = 0;
 var positions: [MAX_PLAYERS]packetData =
 	[_]packetData{packetData{.x=0,.y=0,.angle=0}} ** MAX_PLAYERS;
 var sockp: *const posix.socket_t = undefined;
+var running = true;
 
 const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
@@ -50,7 +51,8 @@ pub fn main() !void {
 		ParameterError.IncorrectArguments => {},
 		else => return err,
 	}
-	try stdout.print("Using port: {}\n", .{addr.getPort()});
+	stdout.print("Using port: {}\n", .{addr.getPort()})
+		catch {};
 	// socket
 	const sock = try posix.socket(
 		posix.AF.INET,
@@ -61,6 +63,10 @@ pub fn main() !void {
 	defer posix.close(sock);
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
+
+	// Start a thread for sending positions
+	_ = try std.Thread.spawn(.{}, broadcaster, .{});
+	defer running = false;
 
 	// reading buffer
 	var buf: [@sizeOf(packet)]u8 = .{0} ** @sizeOf(packet);
@@ -81,16 +87,18 @@ pub fn main() !void {
 		// get operation from first byte
 		const op: ops = @enumFromInt(buf[0]);
 
+		// TODO:
+		// Try the new labelled switch thing here, eliminate that while loop up above
 		switch (op) {
 			.HELLO_HI => {
 				const client_id = try add_conn(client);
-				std.debug.print("Client ID: {}\n", .{client_id});
+				stdout.print("Client ID: {}\n", .{client_id})
+					catch {};
 				// TODO: handle server full use case
 
 				// buffer for hi packet
 				var hi: [BIG_BOI]u8 = undefined;
 				const hi_len = make_hi_pkt(client_id, &hi);
-				std.debug.print("hi_len: {}\n", .{hi_len});
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
@@ -122,8 +130,25 @@ pub fn main() !void {
 				// the new player
 			},
 			.POS => {
-				// TODO:
-				// something something position thread
+				// Update the player list thing
+				const id = buf[1];
+				var data: packetData = packetData{
+					.x = 0,
+					.y = 0,
+					.angle = 0,
+				};
+
+				var thing:[4]u8 = [_]u8{0} ** 4;
+
+				comptime var i = 2;
+				inline for (@typeInfo(packetData).@"struct".fields) |field| {
+					std.mem.copyForwards(u8, &thing, buf[i..i+4]);
+					@field(data, field.name)
+						= @bitCast(std.mem.readInt(u32, &thing, .little));
+					i+=4;
+				}
+				// TODO: don't shid the server if one position update fails
+				try update_position(id, data, client);
 			},
 		}
 	}
@@ -140,7 +165,8 @@ inline fn add_conn(client: net.Address) LobbyErrors!u8 {
 		else {
 			conns[i] = client;
 			no_conns += 1;
-			std.debug.print("Added client: {}\n", .{client});
+			stdout.print("Added client: {}\n", .{client})
+				catch {};
 			return @intCast(i);
 		}
 	}
@@ -184,6 +210,7 @@ test "make_hi_pkt" {
 
 // broadcast packet to everyone but id
 fn broadcast(id: u8, pack: packet) !void {
+	assert(conns[id] != null);
 	for (conns, 0..conns.len) |conn, i| {
 		if (i == id or conn == null)
 			continue; // skip our player and non existant player
@@ -197,10 +224,28 @@ fn broadcast(id: u8, pack: packet) !void {
 	}
 }
 
+fn broadcaster() !void {
+	while (running) {
+		for (conns, 0..conns.len) |conn, i| {
+			if (conn == null)
+				continue;
+			const p: packet = packet{
+				.op = @intFromEnum(ops.POS),
+				.id = @intCast(i),
+				.x = positions[i].x,
+				.y = positions[i].y,
+				.angle = positions[i].angle,
+			};
+			try broadcast(@intCast(i), p);
+			// TODO: fix something about this
+		}
+		std.time.sleep(std.time.ns_per_s * 0.5);
+	}
+}
+
 const PossibleCheaters = error{Impersonation};
 // Change global position data for client
-inline fn update_position(data: packet, client: net.Address) PossibleCheaters!void {
-	const id = data[0];
+inline fn update_position(id: u8, data: packetData, client: net.Address) PossibleCheaters!void {
 
 	// check if a client even exists are that specified address
 	if (conns[id] == null)
@@ -210,25 +255,8 @@ inline fn update_position(data: packet, client: net.Address) PossibleCheaters!vo
 	if (conns[id].?.eql(client) == false)
 		return PossibleCheaters.Impersonation;
 
-	std.mem.copyForwards(u8, positions[id][0..], data[1..]);
-
-	std.debug.print("client: {}, position: {any}\n", .{client, positions[id]});
+	positions[id] = data;
 	return;
-}
-
-// position broadcaster thread
-fn position_broadcaster() !void {
-	while (true) {
-		// TODO: probably needs like lerp or something with whatever timing we
-		// choose. We do this on the client, don't forget to do it.
-		std.time.sleep(std.time.ns_per_s * 0.5);
-		for (0..MAX_PLAYERS) |i|
-			if (conns[i]) |_| {
-				const pack = [_]u8{@intCast(i)} ++ positions[i];
-				try broadcast(@intCast(i), pack);
-			};
-		// TODO: don't shit yourself if a single packet fails to send
-	}
 }
 
 // get port from the command line and return it
