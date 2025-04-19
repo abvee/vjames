@@ -31,6 +31,14 @@ const Gun = struct{
 };
 
 var running: bool = true; // threads running bool
+// player
+// note that all coords are world space coords, unless it's a reference.
+var player: Player = Player{
+	.x = 0,
+	.y = 0,
+	.box = undefined,
+};
+var gun_angle: f32 = 0.0;
 
 pub fn main() !void {
 	// Allocator // TODO: replace with GPA
@@ -48,13 +56,6 @@ pub fn main() !void {
 	rl.InitWindow(screen_width, screen_height, "game");
 	defer rl.CloseWindow();
 
-	// player
-	// note that all coords are world space coords, unless it's a reference.
-	var player: Player = Player{
-		.x = 0,
-		.y = 0,
-		.box = undefined,
-	};
 	player.box = rl.Rectangle{
 		.x = player.x - SIDE / 2,
 		.y = player.y - SIDE / 2,
@@ -116,10 +117,10 @@ pub fn main() !void {
 
 		// update gun
 		const mouse_pos = rl.GetMousePosition();
-		const angle = std.math.atan2((mouse_pos.x - screen_width / 2) , (mouse_pos.y - screen_height / 2));
+		gun_angle = std.math.atan2((mouse_pos.x - screen_width / 2) , (mouse_pos.y - screen_height / 2));
 		gun.center = rl.Vector2{
-			.x = GUN_CIRCLE_RADIUS * std.math.sin(angle) + player.x,
-			.y = GUN_CIRCLE_RADIUS * std.math.cos(angle) + player.y,
+			.x = GUN_CIRCLE_RADIUS * std.math.sin(gun_angle) + player.x,
+			.y = GUN_CIRCLE_RADIUS * std.math.cos(gun_angle) + player.y,
 		};
 
 		// update camera
@@ -150,7 +151,7 @@ pub fn main() !void {
 }
 
 // get data from the server
-fn net_recieve() void {
+fn net_recieve() !void {
 	while (running) {
 		const p = network.recv_packet();
 

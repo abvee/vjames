@@ -50,7 +50,8 @@ pub fn main() !void {
 		ParameterError.IncorrectArguments => {},
 		else => return err,
 	}
-	try stdout.print("Using port: {}\n", .{addr.getPort()});
+	stdout.print("Using port: {}\n", .{addr.getPort()})
+		catch {};
 	// socket
 	const sock = try posix.socket(
 		posix.AF.INET,
@@ -84,13 +85,13 @@ pub fn main() !void {
 		switch (op) {
 			.HELLO_HI => {
 				const client_id = try add_conn(client);
-				std.debug.print("Client ID: {}\n", .{client_id});
+				stdout.print("Client ID: {}\n", .{client_id})
+					catch {};
 				// TODO: handle server full use case
 
 				// buffer for hi packet
 				var hi: [BIG_BOI]u8 = undefined;
 				const hi_len = make_hi_pkt(client_id, &hi);
-				std.debug.print("hi_len: {}\n", .{hi_len});
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
@@ -140,7 +141,8 @@ inline fn add_conn(client: net.Address) LobbyErrors!u8 {
 		else {
 			conns[i] = client;
 			no_conns += 1;
-			std.debug.print("Added client: {}\n", .{client});
+			stdout.print("Added client: {}\n", .{client})
+				catch {};
 			return @intCast(i);
 		}
 	}
