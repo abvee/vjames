@@ -120,3 +120,9 @@ pub inline fn add_player(p: packet) void {
 	};
 	angles[p.id] = p.angle;
 }
+
+pub fn update_positions(p: packet) void {
+	assert(others[p.id] != null);
+	others[p.id].? = rl.Vector2{.x = p.x, .y = p.y};
+	angles[p.id] = p.angle;
+}
