@@ -132,7 +132,7 @@ pub fn main() !void {
 			.POS => {
 				// Update the player list thing
 				const id = buf[1];
-				const data: packetData = packetData{
+				var data: packetData = packetData{
 					.x = 0,
 					.y = 0,
 					.angle = 0,
@@ -143,11 +143,12 @@ pub fn main() !void {
 				comptime var i = 2;
 				inline for (@typeInfo(packetData).@"struct".fields) |field| {
 					std.mem.copyForwards(u8, &thing, buf[i..i+4]);
-					@field(data[id], field.name)
+					@field(data, field.name)
 						= @bitCast(std.mem.readInt(u32, &thing, .little));
 					i+=4;
 				}
-				update_position(id, data, client);
+				// TODO: don't shid the server if one position update fails
+				try update_position(id, data, client);
 			},
 		}
 	}
@@ -223,19 +224,19 @@ fn broadcast(id: u8, pack: packet) !void {
 	}
 }
 
-fn broadcaster() void {
+fn broadcaster() !void {
 	while (running) {
 		for (conns, 0..conns.len) |conn, i| {
 			if (conn == null)
 				continue;
 			const p: packet = packet{
 				.op = @intFromEnum(ops.POS),
-				.id = i,
+				.id = @intCast(i),
 				.x = positions[i].x,
 				.y = positions[i].y,
 				.angle = positions[i].angle,
 			};
-			try broadcast(i, p);
+			try broadcast(@intCast(i), p);
 			// TODO: fix something about this
 		}
 		std.time.sleep(std.time.ns_per_s * 0.5);
@@ -255,7 +256,6 @@ inline fn update_position(id: u8, data: packetData, client: net.Address) Possibl
 		return PossibleCheaters.Impersonation;
 
 	positions[id] = data;
-	std.debug.print("client: {}, position: {any}\n", .{client, positions[id]});
 	return;
 }
 

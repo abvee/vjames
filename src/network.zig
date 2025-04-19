@@ -149,7 +149,7 @@ pub fn send_pos(x: f32, y: f32, angle: f32) !void {
 		.y = y,
 		.angle = angle,
 	};
-	try server.write(std.mem.asBytes(p));
+	_ = try server.write(std.mem.asBytes(&p));
 }
 
 // parse command line arguments
