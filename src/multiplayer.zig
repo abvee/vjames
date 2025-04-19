@@ -26,10 +26,15 @@ var angles: [MAX_PLAYERS]f32 = [_]f32{0.0} ** MAX_PLAYERS;
 
 // take a hi packet and initialise the others list
 pub fn init(hi: []const u8) void {
-	var i: usize = 0; // hi index
+	if (hi.len == 2) {  // empty packet with nothing but op and shizz
+		assert(hi[0] == 0xff); // op line, remove later
+		return;
+	}
 
+	var i: usize = 2; // hi index
 	while (i < hi.len) {
-		const id = hi[i]; // id of that client
+		const id = hi[i]; // id of that player
+		assert(id < MAX_PLAYERS);
 		i += 1;
 
 		// this avoid us accessing null later

@@ -6,22 +6,23 @@ const stdout = std.io.getStdOut().writer();
 
 // Types
 const packet = packed struct {
-	op: u4,
-	id: u4,
+	op: u8,
+	id: u8,
 	x: f32,
 	y: f32,
 	angle: f32,
 };
+
 const packetData = struct {
 	x: f32,
 	y: f32,
 	angle: f32,
 };
 
-const ops = enum(u4) {
-	HELLO_HI = 0xf,
-	NP_NPACK = 0xe, // new player ack
-	POS = 0x0,
+const ops = enum(u8) {
+	HELLO_HI = 0xff,
+	NP_NPACK = 0xee, // new player ack
+	POS = 0x00,
 };
 
 // constants
@@ -78,7 +79,7 @@ pub fn main() !void {
 		);
 
 		// get operation from first byte
-		const op: ops = @enumFromInt(buf[0] >> 4);
+		const op: ops = @enumFromInt(buf[0]);
 
 		switch (op) {
 			.HELLO_HI => {
@@ -88,13 +89,14 @@ pub fn main() !void {
 
 				// buffer for hi packet
 				var hi: [BIG_BOI]u8 = undefined;
-				const n = make_hi_pkt(client_id, &hi);
+				const hi_len = make_hi_pkt(client_id, &hi);
+				std.debug.print("hi_len: {}\n", .{hi_len});
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
 				_ = try posix.sendto(
 					sock,
-					hi[0..n],
+					hi[0..hi_len],
 					0,
 					&client.any,
 					client.getOsSockLen(),
@@ -103,7 +105,7 @@ pub fn main() !void {
 				// new player packet
 				const new_player: packet = packet{
 					.op = @intFromEnum(ops.NP_NPACK),
-					.id = @intCast(client_id & 0x0f), // id of the new player
+					.id = client_id, // id of the new player
 					.x = 0,
 					.y = 0,
 					.angle = 0,
@@ -150,11 +152,11 @@ inline fn add_conn(client: net.Address) LobbyErrors!u8 {
 fn make_hi_pkt(id: u8, buf: []u8) u8 {
 	assert(id < MAX_PLAYERS);
 
-	// the first byte is still op:id
-	buf[0] = @intFromEnum(ops.HELLO_HI);
-	buf[0] = (buf[0] << 4) + id;
+	// the first 2 byte are still op:id
+	buf[0] = @intFromEnum(ops.HELLO_HI); // op
+	buf[1] = id; // id
 
-	var j: u8 = 1; // buf index
+	var j: u8 = 2; // buf index
 	// we then add each player's position
 	for (conns, 0..) |conn, i| {
 		if (i == id) continue; // skip our player
@@ -173,7 +175,7 @@ fn make_hi_pkt(id: u8, buf: []u8) u8 {
 }
 test "make_hi_pkt" {
 	var hi: [BIG_BOI]u8 = undefined;
-	const n = make_hi_pkt(0x1, &hi);
+	const n = make_hi_pkt(0x01, &hi);
 	std.debug.print("the entire hi packet:\n{x}\n", .{hi[0..n]});
 	std.debug.print("length: {}\n", .{n});
 }
