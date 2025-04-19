@@ -90,10 +90,10 @@ pub inline fn draw_others() void {
 				rl.Vector2{
 					.x =
 						constants.GUN_CIRCLE_RADIUS * std.math.sin(angles[i])
-						+ p.x,
+						+ o.?.x,
 					.y =
 						constants.GUN_CIRCLE_RADIUS * std.math.cos(angles[i])
-						+ p.y,
+						+ o.?.y,
 				},
 				constants.GUN_RADIUS,
 				rl.BLUE,
