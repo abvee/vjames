@@ -89,26 +89,22 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	try hello();
 
 	// hi packet
-	var buf: [BIG_BOI]u8 = [_]u8{0} ** BIG_BOI;
-	const n = try server.read(buf[0..]);
+	var hipkt: [BIG_BOI]u8 = [_]u8{0} ** BIG_BOI;
+	const hipkt_len = try server.read(hipkt[0..]);
+	std.debug.print("hipkt_len: {}\n", .{hipkt_len});
 
-	assert(buf[0] == @intFromEnum(ops.HELLO_HI));
+	assert(hipkt[0] == @intFromEnum(ops.HELLO_HI));
 	// TODO: make sure if we get another packet before the HI packet, we don't
-	// shid ourselves.
+	// shid ourselves. here we just assume it's the first packet the client
+	// gets.
 
 	// client id
-	server_id = buf[1];
+	server_id = hipkt[1];
 	std.debug.print("server id is {x}\n", .{server_id});
 	assert(server_id < MAX_PLAYERS);
-	// TODO: verify that the server has sent a hi packet back
-	// If the first packet we recive is another type of packet, it should be
-	// dropped.
-	// Here we just assume it's the correct one.
 
-	// copy the rest of the hi packet without op and id
-	const hi: []u8 = try allocator.alloc(u8, n - 2);
-	std.mem.copyForwards(u8, hi, buf[2..n]);
-
+	const hi: []u8 = try allocator.alloc(u8, hipkt_len);
+	std.mem.copyForwards(u8, hi, hipkt[0..hipkt_len]);
 	return hi;
 }
 
