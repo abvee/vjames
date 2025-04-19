@@ -74,13 +74,13 @@ fn atoi(T: type, s: []const u8) T {
 
 	// return different things depending on the type
 	switch (@typeInfo(T)) {
-		.Int => |info| {
+		.int => |info| {
 			if (info.signedness == .unsigned)
 				return ret
 			else
 				return ret * neg;
 		},
-		.Float => return ret * @as(T, @floatFromInt(neg)),
+		.float => return ret * @as(T, @floatFromInt(neg)),
 		else => return ret * neg,
 	}
 }
