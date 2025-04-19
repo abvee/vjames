@@ -38,7 +38,7 @@ pub fn init(hi: []const u8) void {
 		var buf: [4]u8 = .{0} ** 4;
 
 		// I like to have some meta programming fun
-		inline for (@typeInfo(rl.Vector2).Struct.fields) |field| {
+		inline for (@typeInfo(rl.Vector2).@"struct".fields) |field| {
 			std.mem.copyForwards(u8, &buf, hi[i..i+4]);
 			@field(others[id].?, field.name)
 				= @bitCast(std.mem.readInt(u32, &buf, .little));
