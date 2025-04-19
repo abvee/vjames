@@ -89,13 +89,14 @@ pub fn main() !void {
 
 				// buffer for hi packet
 				var hi: [BIG_BOI]u8 = undefined;
-				const n = make_hi_pkt(client_id, &hi);
+				const hi_len = make_hi_pkt(client_id, &hi);
+				std.debug.print("hi_len: {}\n", .{hi_len});
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
 				_ = try posix.sendto(
 					sock,
-					hi[0..n],
+					hi[0..hi_len],
 					0,
 					&client.any,
 					client.getOsSockLen(),
@@ -155,7 +156,7 @@ fn make_hi_pkt(id: u8, buf: []u8) u8 {
 	buf[0] = @intFromEnum(ops.HELLO_HI); // op
 	buf[1] = id; // id
 
-	var j: u8 = 1; // buf index
+	var j: u8 = 2; // buf index
 	// we then add each player's position
 	for (conns, 0..) |conn, i| {
 		if (i == id) continue; // skip our player
