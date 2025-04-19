@@ -123,8 +123,24 @@ pub fn main() !void {
 				// the new player
 			},
 			.POS => {
-				// TODO:
-				// something something position thread
+				// Update the player list thing
+				const id = buf[1];
+				const data: packetData = packetData{
+					.x = 0,
+					.y = 0,
+					.angle = 0,
+				};
+
+				var thing:[4]u8 = [_]u8{0} ** 4;
+
+				comptime var i = 2;
+				inline for (@typeInfo(packetData).@"struct".fields) |field| {
+					std.mem.copyForwards(u8, &thing, buf[i..i+4]);
+					@field(data[id], field.name)
+						= @bitCast(std.mem.readInt(u32, &thing, .little));
+					i+=4;
+				}
+				update_position(id, data, client);
 			},
 		}
 	}
@@ -201,8 +217,7 @@ fn broadcast(id: u8, pack: packet) !void {
 
 const PossibleCheaters = error{Impersonation};
 // Change global position data for client
-inline fn update_position(data: packet, client: net.Address) PossibleCheaters!void {
-	const id = data[0];
+inline fn update_position(id: u8, data: packetData, client: net.Address) PossibleCheaters!void {
 
 	// check if a client even exists are that specified address
 	if (conns[id] == null)
@@ -212,8 +227,7 @@ inline fn update_position(data: packet, client: net.Address) PossibleCheaters!vo
 	if (conns[id].?.eql(client) == false)
 		return PossibleCheaters.Impersonation;
 
-	std.mem.copyForwards(u8, positions[id][0..], data[1..]);
-
+	positions[id] = data;
 	std.debug.print("client: {}, position: {any}\n", .{client, positions[id]});
 	return;
 }
