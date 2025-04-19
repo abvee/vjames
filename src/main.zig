@@ -156,7 +156,6 @@ pub fn main() !void {
 fn net_recieve() void {
 	while (running) {
 		const p = network.recv_packet();
-
 		if (p.isNewPacket())
 			multiplayer.add_player(p);
 	}

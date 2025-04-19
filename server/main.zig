@@ -99,6 +99,7 @@ pub fn main() !void {
 				// buffer for hi packet
 				var hi: [BIG_BOI]u8 = undefined;
 				const hi_len = make_hi_pkt(client_id, &hi);
+				// std.debug.print("{x}\n", .{hi[0..hi_len]});
 
 				// NOTE: the id of the player is the address's position in the
 				// conns array
@@ -122,6 +123,7 @@ pub fn main() !void {
 				// 0,0
 
 				broadcast(client_id, new_player) catch {};
+				// std.debug.print("Got here\n", .{});
 				// TODO: do something if the broadcast fails ?
 				// will that even be the server's concern at that point ?
 			},
@@ -130,7 +132,6 @@ pub fn main() !void {
 				// the new player
 			},
 			.POS => {
-				// Update the player list thing
 				const id = buf[1];
 				var data: packetData = packetData{
 					.x = 0,
@@ -139,7 +140,6 @@ pub fn main() !void {
 				};
 
 				var thing:[4]u8 = [_]u8{0} ** 4;
-
 				comptime var i = 2;
 				inline for (@typeInfo(packetData).@"struct".fields) |field| {
 					std.mem.copyForwards(u8, &thing, buf[i..i+4]);
@@ -147,6 +147,7 @@ pub fn main() !void {
 						= @bitCast(std.mem.readInt(u32, &thing, .little));
 					i+=4;
 				}
+				// std.debug.print("{any}\n", .{data});
 				// TODO: don't shid the server if one position update fails
 				try update_position(id, data, client);
 			},

@@ -93,7 +93,9 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	var hipkt: [BIG_BOI]u8 = [_]u8{0} ** BIG_BOI;
 	const hipkt_len = try server.read(hipkt[0..]);
 
+
 	assert(hipkt[0] == @intFromEnum(ops.HELLO_HI));
+	std.debug.print("{x}\n", .{hipkt[0..hipkt_len]});
 	// TODO: make sure if we get another packet before the HI packet, we don't
 	// shid ourselves. here we just assume it's the first packet the client
 	// gets.
