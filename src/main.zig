@@ -84,6 +84,8 @@ pub fn main() !void {
 
 	// server reciever thread
 	_ = try std.Thread.spawn(.{}, net_recieve, .{});
+	// position sender thread
+	_ = try std.Thread.spawn(.{}, physics, .{});
 	defer running = false;
 	// TODO: don't defer join this thread until the socket is non-blocking
 
@@ -151,12 +153,21 @@ pub fn main() !void {
 }
 
 // get data from the server
-fn net_recieve() !void {
+fn net_recieve() void {
 	while (running) {
 		const p = network.recv_packet();
 
 		if (p.isNewPacket())
 			multiplayer.add_player(p);
+	}
+}
+
+// Thread runs at fixed intervals of time
+// Used for position udpates
+fn physics() !void {
+	while (running) {
+		std.time.sleep(std.time.ms_per_s);
+		try network.send_pos(player.x, player.y, gun_angle);
 	}
 }
 

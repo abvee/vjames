@@ -141,6 +141,17 @@ pub fn recv_packet() packet {
 	return @bitCast(buf);
 }
 
+pub fn send_pos(x: f32, y: f32, angle: f32) !void {
+	const p: packet = packet{
+		.op = @intFromEnum(ops.POS),
+		.id = server_id,
+		.x = x,
+		.y = y,
+		.angle = angle,
+	};
+	try server.write(std.mem.asBytes(p));
+}
+
 // parse command line arguments
 // They should be in this format:
 // skrr <ip>:<port>
