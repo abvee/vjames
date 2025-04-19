@@ -40,6 +40,7 @@ var no_conns: u8 = 0;
 var positions: [MAX_PLAYERS]packetData =
 	[_]packetData{packetData{.x=0,.y=0,.angle=0}} ** MAX_PLAYERS;
 var sockp: *const posix.socket_t = undefined;
+var running = true;
 
 const ParameterError = error{IncorrectArguments};
 pub fn main() !void {
@@ -63,6 +64,10 @@ pub fn main() !void {
 	// bind
 	try posix.bind(sock, &addr.any, addr.getOsSockLen());
 
+	// Start a thread for sending positions
+	_ = try std.Thread.spawn(.{}, broadcaster, .{});
+	defer running = false;
+
 	// reading buffer
 	var buf: [@sizeOf(packet)]u8 = .{0} ** @sizeOf(packet);
 
@@ -82,6 +87,8 @@ pub fn main() !void {
 		// get operation from first byte
 		const op: ops = @enumFromInt(buf[0]);
 
+		// TODO:
+		// Try the new labelled switch thing here, eliminate that while loop up above
 		switch (op) {
 			.HELLO_HI => {
 				const client_id = try add_conn(client);
@@ -202,6 +209,7 @@ test "make_hi_pkt" {
 
 // broadcast packet to everyone but id
 fn broadcast(id: u8, pack: packet) !void {
+	assert(conns[id] != null);
 	for (conns, 0..conns.len) |conn, i| {
 		if (i == id or conn == null)
 			continue; // skip our player and non existant player
@@ -212,6 +220,25 @@ fn broadcast(id: u8, pack: packet) !void {
 			&conn.?.any,
 			conn.?.getOsSockLen(),
 		);
+	}
+}
+
+fn broadcaster() void {
+	while (running) {
+		for (conns, 0..conns.len) |conn, i| {
+			if (conn == null)
+				continue;
+			const p: packet = packet{
+				.op = @intFromEnum(ops.POS),
+				.id = i,
+				.x = positions[i].x,
+				.y = positions[i].y,
+				.angle = positions[i].angle,
+			};
+			try broadcast(i, p);
+			// TODO: fix something about this
+		}
+		std.time.sleep(std.time.ns_per_s * 0.5);
 	}
 }
 
@@ -230,21 +257,6 @@ inline fn update_position(id: u8, data: packetData, client: net.Address) Possibl
 	positions[id] = data;
 	std.debug.print("client: {}, position: {any}\n", .{client, positions[id]});
 	return;
-}
-
-// position broadcaster thread
-fn position_broadcaster() !void {
-	while (true) {
-		// TODO: probably needs like lerp or something with whatever timing we
-		// choose. We do this on the client, don't forget to do it.
-		std.time.sleep(std.time.ns_per_s * 0.5);
-		for (0..MAX_PLAYERS) |i|
-			if (conns[i]) |_| {
-				const pack = [_]u8{@intCast(i)} ++ positions[i];
-				try broadcast(@intCast(i), pack);
-			};
-		// TODO: don't shit yourself if a single packet fails to send
-	}
 }
 
 // get port from the command line and return it
