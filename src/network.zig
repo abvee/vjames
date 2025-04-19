@@ -10,7 +10,6 @@ const stdout = std.io.getStdOut().writer();
 
 const MAX_PLAYERS = constants.MAX_PLAYERS;
 const PORT = 12271; // default port
-const OP_MASK: u8 = 0xf0; // get u4 from u8
 const BIG_BOI = 2048; // big array number that will never overflow
 
 var sock: ?posix.socket_t  = null; // client socket
@@ -24,8 +23,8 @@ var server_id: u8 = undefined; // id assigned by the server
 
 // generic packet
 pub const packet = packed struct {
-	op: u4, // refer packet datasheet
-	id: u4,
+	op: u8, // refer packet datasheet
+	id: u8,
 	x: f32,
 	y: f32,
 	angle: f32, // gun rotation angle
@@ -37,15 +36,15 @@ pub const packet = packed struct {
 	}
 };
 
-const ops = enum(u4) {
-	HELLO_HI = 0xf,
-	NP_NPACK = 0xe, // new player
-	POS = 0x0, // position of player
+const ops = enum(u8) {
+	HELLO_HI = 0xff,
+	NP_NPACK = 0xee, // new player
+	POS = 0x00, // position of player
 };
 
 // init does the following things:
 // sends HELLO pkt
-// allocate for HI pkt
+// recieve HI pkt
 // return HI pkt
 pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	assert(sock == null); // stops init() from being called twice
@@ -93,8 +92,12 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	var buf: [BIG_BOI]u8 = [_]u8{0} ** BIG_BOI;
 	const n = try server.read(buf[0..]);
 
-	// first byte of the hi packet is the id
-	server_id = buf[0] & (~OP_MASK);
+	assert(buf[0] == @intFromEnum(ops.HELLO_HI));
+	// TODO: make sure if we get another packet before the HI packet, we don't
+	// shid ourselves.
+
+	// client id
+	server_id = buf[1];
 	std.debug.print("server id is {x}\n", .{server_id});
 	assert(server_id < MAX_PLAYERS);
 	// TODO: verify that the server has sent a hi packet back
@@ -102,17 +105,17 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	// dropped.
 	// Here we just assume it's the correct one.
 
-	// copy the rest of the hi packet
-	const hi: []u8 = try allocator.alloc(u8, n - 1);
-	std.mem.copyForwards(u8, hi, buf[1..n]);
+	// copy the rest of the hi packet without op and id
+	const hi: []u8 = try allocator.alloc(u8, n - 2);
+	std.mem.copyForwards(u8, hi, buf[2..n]);
 
 	return hi;
 }
 
 inline fn hello() !void {
 	const hello_packet: packet = packet{
-		.op = 0xf,
-		.id = 0xf,
+		.op = 0xff,
+		.id = 0,
 		.x = 0,
 		.y = 0,
 		.angle = 0,
@@ -128,14 +131,6 @@ pub fn deinit() void {
 	sock = null; // this will maybe be required when we want to reconnect
 	server.close(); // will this close the server writer ???
 }
-
-// const x: f32 = @as(*f32, @alignCast(@ptrCast(&buf[0]))).*;
-// const y: f32 = @as(*f32, @alignCast(@ptrCast(&buf[4]))).*;
-// Okay, I think I need to explain this ^
-// We read from the socket into the buffer of 8 bytes
-// then we cast the first 4 bytes and the last 4 bytes
-// I'm dereferencing the *f32 we get immediately in the hopes that all this
-// stuff stays in the registers so that alignment isn't broken.
 
 // get another player's packets from the server
 pub fn recv_packet() packet {
