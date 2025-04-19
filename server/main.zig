@@ -110,10 +110,12 @@ pub fn main() !void {
 					.y = 0,
 					.angle = 0,
 				};
+				// TODO: spawn locations for players. Don't just dump them at
+				// 0,0
+
 				broadcast(client_id, new_player) catch {};
 				// TODO: do something if the broadcast fails ?
-				// will that even be our concern at that point ?
-				// Idk just redo it ig ?
+				// will that even be the server's concern at that point ?
 			},
 			.NP_NPACK => {
 				// TODO: do something about making sure everyone acknoledges

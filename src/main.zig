@@ -8,6 +8,7 @@ const level = @import("level.zig");
 const network = @import("network.zig");
 const multiplayer = @import("multiplayer.zig");
 const constants = @import("constants.zig");
+const stdout = std.io.getStdOut().writer();
 
 const screen_width = 1440;
 const screen_height = 900;
@@ -152,7 +153,7 @@ pub fn main() !void {
 fn net_recieve() void {
 	while (running) {
 		const p = network.recv_packet();
-		// it's waiting for a packet'
+
 		if (p.isNewPacket())
 			multiplayer.add_player(p);
 	}

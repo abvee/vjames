@@ -64,7 +64,7 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 		);
 	}
 
-	std.debug.print("Connecting to {}\n", .{addr});
+	stdout.print("Connecting to {}\n", .{addr});
 
 	// socket and connect
 	sock = try posix.socket(
@@ -91,7 +91,6 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 	// hi packet
 	var hipkt: [BIG_BOI]u8 = [_]u8{0} ** BIG_BOI;
 	const hipkt_len = try server.read(hipkt[0..]);
-	std.debug.print("hipkt_len: {}\n", .{hipkt_len});
 
 	assert(hipkt[0] == @intFromEnum(ops.HELLO_HI));
 	// TODO: make sure if we get another packet before the HI packet, we don't
@@ -100,7 +99,7 @@ pub fn init(allocator: std.mem.Allocator) ![]u8 {
 
 	// client id
 	server_id = hipkt[1];
-	std.debug.print("server id is {x}\n", .{server_id});
+	stdout.print("Your id is {x}\n", .{server_id});
 	assert(server_id < MAX_PLAYERS);
 
 	const hi: []u8 = try allocator.alloc(u8, hipkt_len);

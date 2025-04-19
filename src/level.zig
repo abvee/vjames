@@ -7,6 +7,7 @@ const rl = @cImport({
 });
 
 const MAX = 1024; // temporary maximum variable
+const stdout = std.io.getStdOut().writer();
 
 // the level doesn't ever need to change, so just cast it to const.
 pub fn load(allocator: std.mem.Allocator, path: []const u8) ![]rl.Rectangle {
