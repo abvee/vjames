@@ -53,6 +53,7 @@ pub fn main() !void {
 	// multiplayer.debug_print();
 
 	// Init window
+	rl.SetTraceLogLevel(rl.LOG_ERROR);
 	rl.InitWindow(screen_width, screen_height, "game");
 	defer rl.CloseWindow();
 
@@ -157,9 +158,6 @@ fn net_recieve() void {
 	while (running) {
 		const p = network.recv_packet();
 		if (p.isPosPacket()) {
-			std.debug.print("position packet: {x}\n", .{
-				std.mem.asBytes(&p)
-			});
 			multiplayer.update_positions(p);
 		}
 		else if (p.isNewPlayerPacket())
