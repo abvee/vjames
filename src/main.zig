@@ -156,8 +156,12 @@ pub fn main() !void {
 fn net_recieve() void {
 	while (running) {
 		const p = network.recv_packet();
-		if (p.isPosPacket())
-			multiplayer.update_positions(p)
+		if (p.isPosPacket()) {
+			std.debug.print("position packet: {x}\n", .{
+				std.mem.asBytes(&p)
+			});
+			multiplayer.update_positions(p);
+		}
 		else if (p.isNewPlayerPacket())
 			multiplayer.add_player(p);
 	}
@@ -167,8 +171,8 @@ fn net_recieve() void {
 // Used for position udpates
 fn physics() !void {
 	while (running) {
-		std.time.sleep(std.time.ms_per_s);
 		try network.send_pos(player.x, player.y, gun_angle);
+		std.time.sleep(std.time.ms_per_s * 0.1);
 	}
 }
 

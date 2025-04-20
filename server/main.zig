@@ -240,7 +240,7 @@ fn broadcaster() !void {
 			try broadcast(@intCast(i), p);
 			// TODO: fix something about this
 		}
-		std.time.sleep(std.time.ns_per_s * 0.5);
+		std.time.sleep(std.time.ns_per_s * 0.1);
 	}
 }
 
